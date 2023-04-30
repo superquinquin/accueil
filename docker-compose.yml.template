@@ -1,0 +1,25 @@
+version: "3"
+
+services:
+  accueil:
+    build: .
+    container_name: accueil
+    environment:
+      ERPPEEK_ADDRESS: '??'
+      ERPPEEK_API_URL: '??'
+      ERPPEEK_API_DB: '??'
+      ERPPEEK_SERVICE_ACCOUNT_LOGGIN: '??'
+      ERPPEEK_SERVICE_ACCOUNT_PASSWORD: '??'
+      APP_CONFIG: 'staging'
+      TZ:"Europe/Paris"
+    ports:
+      - "8000:8000"
+    networks:
+      - accueil
+    volumes:
+      - ./volume:/usr/src/app/volume
+
+networks:
+  accueil:
+
+

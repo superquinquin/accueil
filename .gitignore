@@ -1,0 +1,9 @@
+application/config.py
+application/static/js/config.js
+volume
+*.pickle
+*.log
+*.pyc
+.venv
+docker-compose.yml
+test.py
