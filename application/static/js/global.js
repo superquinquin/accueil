@@ -21,9 +21,20 @@ function createShiftBubble(context) {
     shift.classList.add('shift');
     shift.setAttribute('id',context.shift_id);
 
+    let header = document.createElement("div");
+    header.classList.add("shiftHeader");
+
     let title = document.createElement('h2');
     title.innerHTML = context.display_shift_name;
-    shift.appendChild(title);
+    header.appendChild(title);
+
+    let catchUp = document.createElement("button");
+    catchUp.classList.add("catchUpBtn");
+    catchUp.setAttribute("onclick", "askCatchingUp("+context.shift_id+")");
+    catchUp.innerHTML = "Rattrapage";
+    header.appendChild(catchUp);
+
+    shift.appendChild(header)
 
     let ul = document.createElement('ul');
     for (var m of context.members) {
@@ -114,3 +125,158 @@ function confirmedPresence(reg_id, partner_id, shift_id) {
     socket.emit("confirm-presence", {"registration_id":reg_id, "partner_id": partner_id, "shift_id": shift_id})
     CloseCModal()
 }
+
+
+function askCatchingUp(shift_id) {
+    document.getElementById("member-list").classList.add(shift_id);
+    OpenCatchingUpModal()
+}
+
+function OpenCatchingUpModal() {
+    console.log('modal open')
+    window.scrollTo(0, window.scrollY); 
+    document.getElementById('catchingUp-modal').style.top = (window.scrollY - 5).toString() + 'px';
+    document.getElementById('catchingUp-modal').style.display = 'flex';
+    document.getElementById('html').style.overflowY = 'hidden';
+}
+
+function CloseCatchingUpModal() {
+    let shift_id = document.getElementById("member-list").classList[0]
+    document.getElementById('catchingUp-modal').style.display = 'none';
+    document.getElementById('html').style.overflowY = 'visible';
+    document.getElementById("member-list").innerHTML = "";
+    document.getElementById("member-list").classList.remove(shift_id);
+    document.getElementById("search-CatchinUp").value = "";
+
+}
+
+function searchMember(id) {
+    let value = document.getElementById(id).value;
+    socket.emit('search-member', {"input": value});
+    let list = document.getElementById("member-list");
+    list.innerHTML = "";
+    list.innerHTML  = "Recherche en cours...";
+}
+
+function populateMemberList(context) {
+    let container = document.getElementById("member-list");
+    container.innerHTML = "";
+
+    let ul = document.createElement("ul");
+    if (context.l == 1) {
+        let li = createCatchingUpMemberBubble(
+            context.members[0], 
+            context.members[1], 
+            context.members[2]
+        );
+        ul.appendChild(li);
+    } else {
+        for (var m of context.members) {
+            let li = createCatchingUpMemberBubble(
+                m[0],
+                m[1], 
+                m[2]
+            );
+            ul.appendChild(li);
+        }
+    }
+    container.appendChild(ul);
+}
+
+
+function createCatchingUpMemberBubble(p_id, brcd, p_name) {
+    let li = document.createElement('li');
+    li.setAttribute('partner_id', p_id);
+    li.setAttribute('barcode', brcd);
+    li.classList.add("li-member");
+
+    let box = document.createElement("input");
+    box.setAttribute("type", "checkbox");
+    box.setAttribute("onclick", "OnlyOnCheckRemain(this)");
+
+    let span = document.createElement("span");
+    span.innerHTML = brcd + " - " + p_name;
+
+    li.appendChild(box);
+    li.appendChild(span);
+
+    return li
+}
+
+
+function OnlyOnCheckRemain(elm) {
+    let ul = elm.parentNode.parentNode
+    let id = elm.parentNode.getAttribute("partner_id");
+    for (li of ul.getElementsByClassName('li-member')) {
+        let other_id = li.getAttribute("partner_id");
+        if (id != other_id) {
+            li.firstChild.checked = false;
+        }
+    }
+}
+
+
+
+function regiesterCatchUp() {
+    let container = document.getElementById('member-list');
+    for (li of container.getElementsByClassName("li-member")) {
+        if (li.firstChild.checked) {
+            let context = {
+                "shift_id": container.classList[0],
+                "partner_id": li.getAttribute("partner_id"),
+            }
+            socket.emit("register-catching-up", context);
+        }
+    }
+    CloseCatchingUpModal()
+}
+
+
+
+
+
+// COMMON EVENTS
+
+socket.on('update-on-presence', function(context) {
+    console.log('updating status')
+    let row = document.getElementById(context.registration_id);
+    let span = document.createElement("span");
+    span.innerHTML = "✓";
+
+    row.setAttribute("state", "done");
+    row.classList.remove("open");
+    row.classList.add("done");
+    row.appendChild(span);
+});
+
+socket.on('populate-search-members', function(context) {
+    console.log('updating members list')
+    console.log(context.members)
+    populateMemberList(context);
+});
+
+
+socket.on("add-catching-up-member-to-shift", function(context) {
+    console.log(context);
+    let container = document.getElementById(context.shift_id);
+    let ul = container.getElementsByTagName('ul')[0];
+
+    let m = context.members
+    let li = document.createElement('li');
+    li.setAttribute('shift_id', context.shift_id)
+    li.setAttribute('partner_id', m.id);
+    li.setAttribute('state', m.state);
+    li.setAttribute('id', m.registration_id);
+
+    li.innerHTML = m.display_name;
+    if (m.state != "done") {
+        li.setAttribute('onclick', "askConfirmation("+m.registration_id+")");
+        li.classList.add("open");
+    } else {
+        li.classList.add("done");
+        let span = document.createElement("span");
+        span.innerHTML = "✓";
+        li.appendChild(span);
+    }
+    ul.appendChild(li);
+});

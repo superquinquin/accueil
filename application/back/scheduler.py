@@ -39,7 +39,8 @@ class Scheduler:
         |
         |
         ▼
-    Odoo.post_absence      
+    Odoo.post_absence  
+    Odoo.close_shifts    
     
                               
     @routine (deque) : DEQUE FILLED WITH TIMED TASKS
@@ -72,7 +73,7 @@ class Scheduler:
                     config.API_DB, 
                     config.API_VERBOSE)
         if from_runner:
-            api.post_absence()
+            api.closisng_shifts_routine()
         
         cache["shifts"] = {}
         cache = api.fetch_today_shifts(cache)

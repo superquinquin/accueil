@@ -11,6 +11,7 @@ socket.on('connect', function() {
 
 
 socket.on('load-init-data', function(context) {
+    console.log(context)
     let body = document.body
     let ids = [];
     for (s of body.getElementsByClassName("shift")) {
@@ -23,12 +24,3 @@ socket.on('load-init-data', function(context) {
     }
 });
 
-
-socket.on('update-on-presence', function(context) {
-    console.log('updating status')
-    let row = document.getElementById(context.registration_id);
-    row.setAttribute("state", "done");
-    row.setAttribute("state", "done");
-    row.classList.remove("open");
-    row.classList.add("done");
-});

@@ -3,7 +3,7 @@ from typing import Tuple
  
 
 def translate_day(name: str) -> str:
-    name_part = ["lun", "mar", "mer", "jeu", "ven", "samedi", "dim"]
+    name_part = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"]
     day = ["Lundi","Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi","Dimanche"]
 
     for d in zip(name_part, day):
@@ -27,3 +27,20 @@ def get_delay_from_datetime(time:Tuple[int, int, int]):
     
     return (next_start - now).total_seconds()
     
+
+
+
+def reject_particular_shift():
+    prtclr = ["TRAV",
+        "COMM", 
+        "ACH", 
+        "BUV", 
+        "ACC", 
+        "HYG", 
+        "AME", 
+        "Service volants",
+        "BDM", 
+        "COMPTA", 
+        "INFO"
+    ]
+    return [("name", "not like", n) for n in prtclr]

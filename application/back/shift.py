@@ -10,13 +10,16 @@ class Shift:
                  id, 
                  shift_type_id, 
                  shift_tmpl_id, 
-                 day, wk_name, 
+                 shift_tikets_id,
+                 day, 
+                 wk_name, 
                  begin, 
                  end, 
                  state) -> None:
         self.id: int = id
         self.shift_type_id: int = shift_type_id
         self.shift_tmpl_id: int = shift_tmpl_id
+        self.shift_tikets_id: Dict[str, int] = shift_tikets_id
         self.day: str = day
         self.week_name: str = wk_name
         self.begin: str = begin,

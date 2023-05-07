@@ -10,7 +10,7 @@ from typing import List, Tuple
 
 from application.back.shift import Shift
 from application.back.member import Member
-from application.back.utils import translate_day
+from application.back.utils import translate_day, reject_particular_shift
 
 class Odoo:
     """ODOO INSTANCE
@@ -89,27 +89,36 @@ class Odoo:
                                           minute=59, 
                                           second=59, 
                                           microsecond=59)
-        
-        shifts = self.browse("shift.shift",
-                         [("date_begin_tz", ">=", dt_floor.isoformat()),
-                          ("date_begin_tz", "<=", dt_ceiling.isoformat())]
-                )
-        
+
+        shifts = self.browse(
+            "shift.shift",
+            [("date_begin_tz", ">=", dt_floor.isoformat()),
+             ("date_begin_tz", "<=", dt_ceiling.isoformat()),
+             ] + reject_particular_shift()
+        )
+   
         for shift in shifts:
             print(f"{shift.id} - {shift.name} : {shift.date_begin_tz} - {shift.date_end_tz}")
-            
+
             shift_id = shift.id
             begin = datetime.fromisoformat(shift.date_begin_tz).strftime("%Hh%M")
             end = datetime.fromisoformat(shift.date_end_tz).strftime("%Hh%M")
-            s = Shift(shift_id,
-                    shift.shift_type_id.id,
-                    shift.shift_template_id.id,
-                    translate_day(shift.name),
-                    shift.week_name,
-                    begin,
-                    end,
-                    shift.state
-                )
+            tickets = self.browse(
+                "shift.ticket",
+                [("shift_id", "=", shift_id)]
+            )
+
+            s = Shift(
+                shift_id,
+                shift.shift_type_id.id,
+                shift.shift_template_id.id,
+                {str(t.shift_type): t.id for t in tickets},
+                translate_day(shift.name),
+                shift.week_name,
+                begin,
+                end,
+                shift.state
+            )
             s.correct_auto_singleton_transform()
             cache['shifts'][shift_id] = s
 
@@ -136,6 +145,15 @@ class Odoo:
         for m in members:
             member_id = m.partner_id.id
             shift_id = m.shift_id.id
+            member = self.create_main_member(m)
+            cache["shifts"][shift_id].members[member_id] = member
+            
+        return cache
+    
+    
+    def create_main_member(self, m: erppeek.Record):
+            member_id = m.partner_id.id
+            shift_id = m.shift_id.id
             registration_id = m.id
             has_associated_member = m.partner_id.nb_associated_people
             is_associated_member = m.partner_id.is_associated_people
@@ -146,22 +164,24 @@ class Odoo:
             else:
                 assoc = None
             
-            member = Member(member_id,
-                            shift_id,
-                            registration_id,
-                            None,
-                            m.name,
-                            has_associated_member,
-                            is_associated_member,
-                            m.shift_type,
-                            m.exchange_state,
-                            m.state,
-                            assoc)
+            member = Member(
+                member_id,
+                shift_id,
+                registration_id,
+                None,
+                m.name,
+                m.partner_id.barcode_base,
+                has_associated_member,
+                is_associated_member,
+                m.shift_type,
+                m.exchange_state,
+                m.state,
+                assoc
+            )
             
             member.generate_display_name()
-            cache["shifts"][shift_id].members[member_id] = member
-            
-        return cache
+            return member
+    
     
     def fetch_associated_member(self, is_parent_id: int) -> Member:
         """MEMBER STRUCT CONSTRUCTOR FOR ASSOCIATED MEMBERS
@@ -195,17 +215,20 @@ class Odoo:
         
         if m:
             has_associate = True
-            member = Member(m.id,
-                            None,
-                            None,
-                            is_parent_id,
-                            m.name,
-                            False,
-                            True,
-                            None,
-                            None,
-                            None,
-                            None)
+            member = Member(
+                m.id,
+                None,
+                None,
+                is_parent_id,
+                m.name,
+                m.barcode_base,
+                False,
+                True,
+                None,
+                None,
+                None,
+                None
+            )
             
         else:
             member = None
@@ -225,15 +248,16 @@ class Odoo:
         Args:
             registration_id (int): shift.registration Id key
         """
-        service = self.get("shift.registration", 
-                           [("id", "=", registration_id)]
-                )
+        service = self.get(
+            "shift.registration", 
+            [("id", "=", registration_id)]
+        )
         service.state = "done"
         
         
         
     
-    def post_absence(self) -> None:
+    def post_absence(self, services) -> None:
         """
         TIMED THREAD LAUCHED BY SCHEDULER STRUCT RUNNER
         UPDATING SHIFT.REGISTRATION STATUS
@@ -244,19 +268,51 @@ class Odoo:
         OPTIONAL: CLOSING SHIFT ?
         """
         print('updating absence status')
-        now = datetime.now()
-        floor = now - timedelta(hours=24)
+        # now = datetime.now()
+        # floor = now - timedelta(hours=24)
         
-        services = self.browse("shift.registration",
-                               [("date_begin",">=", floor.isoformat()),
-                                ("date_begin","<=", now.isoformat()),
-                                ("state","=", "open")]
-                    )
+        # services = self.browse(
+        #     "shift.registration",
+        #     [("date_begin",">=", floor.isoformat()),
+        #     ("date_begin","<=", now.isoformat()),
+        #     ("state","=", "open")]
+        # )
         ids = [s.id for s in services if self.is_not_exempted(s.partner_id.id)]
         self.client.write("shift.registration",ids, {"state": "absent"})
         
-        ## ???? api.execute('res.partner','run_process_target_status', []) ????
-        ## AUTO SHIFTS VALIDATION "EXECUTE BUTON_DONE"
+    
+    
+    def close_shift(self, shift):
+        print('closing shift')
+        
+        try:
+            shift.button_done()
+        except Exception as e:
+            # marshall none 
+            print("marshall")
+            pass
+    
+    
+    def closisng_shifts_routine(self):
+        now = datetime.now()
+        floor = now - timedelta(hours=24)
+        
+        services = self.browse(
+            "shift.registration",
+            [("date_begin",">=", floor.isoformat()),
+            ("date_begin","<=", now.isoformat()),
+            ("state","=", "open")]
+        )        
+        
+        shifts = self.browse(
+            "shift.shift",
+            [("date_begin_tz", ">=", floor.isoformat()),
+             ("date_begin_tz", "<=", now.isoformat()),
+             ] + reject_particular_shift()
+        )
+
+        self.post_absence(services)
+        [self.close_shift(shift) for shift in shifts]
     
     
     
@@ -276,3 +332,49 @@ class Odoo:
         if coop_state == "exempted":
             exemption = False
         return exemption
+    
+    
+    
+    
+    
+    def associated_member(self, partner_id):
+        m = self.get(
+            "res.partner", 
+            [("id", "=", partner_id)]
+        )
+        
+        return (m.is_associated_people, 
+                m.parent_id,
+                m.shift_type)
+    
+    
+    def main_member_from_associated(self, is_parent_id):
+        m = self.get(
+            "res.partner", 
+            [("id", "=", is_parent_id)]
+        )
+        
+    
+    
+    def register_member_to_shift(
+        self, 
+        shift_id, 
+        partner_id, 
+        shift_ticket_id, 
+        stype) -> erppeek.Record:
+
+        service = self.create(
+            "shift.registration",
+            {
+            "partner_id": partner_id,
+            "shift_id": shift_id,
+            "shift_type": stype,
+            "shift_ticket_id": shift_ticket_id,
+            "related_shift_state": 'confirm',
+            "state": 'open'
+            }
+        )
+        service.state = "done"
+        
+        return service
+

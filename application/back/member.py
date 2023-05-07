@@ -5,24 +5,28 @@ MIRROR ODOO RES.PARTNER MODEL WITH FEW USEFUL FIELDS
 from typing import Union
 
 class Member:
-    def __init__(self, 
-                 id, 
-                 shift_id,
-                 registration_id,
-                 parent_id,
-                 name, 
-                 has_associated_member, 
-                 is_associated_member, 
-                 shift_type, 
-                 exchange_state, 
-                 state,
-                 member) -> None:
+    def __init__(
+        self, 
+        id, 
+        shift_id,
+        registration_id,
+        parent_id,
+        name, 
+        barcode,
+        has_associated_member, 
+        is_associated_member, 
+        shift_type, 
+        exchange_state, 
+        state,
+        member
+        ) -> None:
         
         self.id: int = id
         self.shift_id: Union[None, int] = shift_id
         self.registration_id: Union[None, int] = registration_id
         self.parent_id: Union[None, int] = parent_id
         self.name: str = name
+        self.barcode: int = barcode
         self.has_associated_member: bool = has_associated_member
         self.is_associated_member: bool = is_associated_member
         
@@ -37,9 +41,9 @@ class Member:
         CONTAINING Partner_id, Partner_id.name AND ASSOCIATED Partner_id.name
         """
         if self.has_associated_member:
-            self.display_name = f"{self.id} - {self.name} en binôme avec {self.associate.name}"
+            self.display_name = f"{self.barcode} - {self.name} en binôme avec {self.associate.name}"
         else:
-            self.display_name = f"{self.id} - {self.name}"
+            self.display_name = f"{self.barcode} - {self.name}"
             
     def payload(self) -> dict:
         """BUILD PAYLOAD WITH MEMBER NECESSARY DATA
