@@ -5,7 +5,7 @@ EASIER TO LOG AND OBS THREAD PROCESS
 """
 
 
-from typing import List, Tuple, Callable
+from typing import List, Dict, Tuple, Callable, Any
 from collections import deque
 from datetime import datetime, timedelta
 from threading import Timer
@@ -53,7 +53,7 @@ class Scheduler:
     def __init__(self) -> None:
         self.routine: deque =  deque()
 
-    def build_routine(self, cache: dict, from_runner: bool =True) -> None:
+    def build_routine(self, cache: Dict[str, Any], from_runner: bool =True) -> None:
         """MAIN SCHEDULER METHOD
         COLLECT INTO cache TODAY SHIFTS INFORMATIONS AND ASSIGNED MEMBERS
         BUILD ROUTINE TASKS DEQUE AND RUN THREAD RUNNER CYCLE.
@@ -67,13 +67,15 @@ class Scheduler:
         
         config = cache['config']
         api = Odoo()
-        api.connect(config.API_URL, 
-                    config.SERVICE_ACCOUNT_LOGGIN, 
-                    config.SERVICE_ACCOUNT_PASSWORD, 
-                    config.API_DB, 
-                    config.API_VERBOSE)
+        api.connect(
+            config.API_URL, 
+            config.SERVICE_ACCOUNT_LOGGIN, 
+            config.SERVICE_ACCOUNT_PASSWORD, 
+            config.API_DB, 
+            config.API_VERBOSE
+        )
         if from_runner:
-            api.closisng_shifts_routine()
+            api.closing_shifts_routine()
         
         cache["shifts"] = {}
         cache = api.fetch_today_shifts(cache)
@@ -81,7 +83,7 @@ class Scheduler:
         self._new_routine(cache)
         self._ROUTINE_RUNNER(cache)
 
-    def rm(self, shift: Shift, cache: dict) -> dict:
+    def rm(self, shift: Shift, cache: Dict[str, Any]) -> Dict[str, Any]:
         """CALLBACK METHOD.
         TAKES A SHIFT FROM cache["current_shifts"]
         REMOVE IT'S REFERENCE.
@@ -104,7 +106,7 @@ class Scheduler:
                 break
         return cache
 
-    def add(self, shift: Shift, cache: dict) -> dict:
+    def add(self, shift: Shift, cache: Dict[str, Any]) -> Dict[str, Any]:
         """CALLBACK METHOD.
         TAKES A SHIFT FROM cache["shifts"]
         PLACE IT'S REFERENCE IN cache["current_shifts"]
@@ -122,10 +124,11 @@ class Scheduler:
         cache["current_shifts"].append(shift)
         return cache
 
-    def _clear_passed_tasks(self, 
-                           tasks: List[Tuple[int, datetime, Callable]], 
-                           cache: dict
-                           ) -> Tuple[List[Tuple[int, datetime, Callable]], dict]:
+    def _clear_passed_tasks(
+        self, 
+        tasks: List[Tuple[int, datetime, Callable]], 
+        cache: Dict[str, Any]
+        ) -> Tuple[List[Tuple[int, datetime, Callable]], Dict[str, Any]]:
         
         """TAKES LIST OF TASKS, 
         APPLY THEM UNTIL NEXT TASK DATETIME > CURRENT DATETIME.
@@ -144,7 +147,7 @@ class Scheduler:
         return (tasks, cache)
 
 
-    def _new_routine(self, cache: dict) -> None:
+    def _new_routine(self, cache: Dict[str, Any]) -> None:
         """SIMILAR TO A CRONTAB.
         BUILD SET OF TASKS CONTAINED IN A DEQUE.
         IN ORDER TO DISPLAY ONLY CURRENT SHIFTS
@@ -176,7 +179,7 @@ class Scheduler:
         self.routine = deque(tasks)
 
 
-    def _ROUTINE_RUNNER(self, cache: dict) -> None:
+    def _ROUTINE_RUNNER(self, cache: Dict[str, Any]) -> None:
         """RUNNER METHOD. CYCLING
         RUN TIMED THREAD FOR BUILDING ROUTINE AND EXECUTING ROUTINE TASK.
         
@@ -197,7 +200,11 @@ class Scheduler:
             timer = Timer(delay, self.build_routine, [cache])
             timer.start()
         
-    def _execute(self, task: Tuple[int, datetime, Callable], cache: dict) -> None:
+    def _execute(
+        self, 
+        task: Tuple[int, datetime, Callable], 
+        cache: Dict[str, Any]
+        ) -> None:
         """RUN THREAD RUNNER AFTER EXECUTION, LEADING TO EXECUTION OF NEXT TASK
         TAKES A TASK AND RESOLVE IT'S EFFECT.
         task affect directly cache["current_shifts"] data
@@ -212,7 +219,11 @@ class Scheduler:
         cache = callback(shift, cache)
         self._ROUTINE_RUNNER(cache)
         
-    def _execute_once(self, task:Tuple[int, datetime, Callable], cache: dict) -> dict:
+    def _execute_once(
+        self, 
+        task:Tuple[int, datetime, Callable], 
+        cache: Dict[str, Any]
+        ) -> Dict[str, Any]:
         """DO NOT RUN THREAD RUNNER AFTERWARD EXECTUTION
         TAKES A TASK AND RESOLVE IT'S EFFECT.
         task affect directly cache["current_shifts"] data

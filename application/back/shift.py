@@ -2,20 +2,23 @@
 IMPL SHIFT STRUCT
 BASED ON SHIFT.SHIFT MODEL
 """
-from typing import Dict
+from typing import Dict, Any
 from application.back.member import Member
 
 class Shift:
-    def __init__(self, 
-                 id, 
-                 shift_type_id, 
-                 shift_tmpl_id, 
-                 shift_tikets_id,
-                 day, 
-                 wk_name, 
-                 begin, 
-                 end, 
-                 state) -> None:
+    def __init__(
+        self, 
+        id, 
+        shift_type_id, 
+        shift_tmpl_id, 
+        shift_tikets_id,
+        day, 
+        wk_name, 
+        begin, 
+        end, 
+        state
+        ) -> None:
+        
         self.id: int = id
         self.shift_type_id: int = shift_type_id
         self.shift_tmpl_id: int = shift_tmpl_id
@@ -28,7 +31,7 @@ class Shift:
         self.members: Dict[Member] = {}
     
     
-    def correct_auto_singleton_transform(self):
+    def correct_auto_singleton_transform(self) -> None:
         """CORRECT BEGIN_DATE_TZ THAT AUTOMATICALLY RETURN IN TUPLE FORMAT
         TRANSLATE self.begin to string
         """
@@ -43,7 +46,7 @@ class Shift:
         """
         return  f"{self.day} {self.begin} - {self.end}"
     
-    def payload(self) -> dict:
+    def payload(self) -> Dict[str, Any]:
         """BUILD PAYLOAD WITH SHIFT NECESSARY DATA
         Returns:
             dict: payload

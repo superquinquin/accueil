@@ -4,16 +4,28 @@ SOCKETIO EVENTS RESPONSE
 
 from flask import url_for
 from flask_socketio import emit, join_room
+from typing import Dict, Any
+
 
 from .. import socketio, cache
 from application.back.odoo import Odoo
 from application.back.shift import Shift
 from application.back.member import Member
+from application.back.utils import get__appropriate_stype
+
 
 @socketio.on('shift-init')
 def init_shift():
-    """CLIENT INITIAL CALL TO POPULATE INDEX TEMPLATE (SHIFT)
-    WHITH RELEVANT DATA Shift & Member data
+    """
+    from current_dshifts cache,
+    generate shift payload
+    generate shift registration payload
+    of current shifts
+    
+    emit:
+        emit payload to populate client
+        with shifts and shifts registrations 
+        of current shifts
     """
     global cache
     
@@ -27,8 +39,14 @@ def init_shift():
 
 @socketio.on('all-shift-init')
 def init_all_shifts():
-    """CLIENT INITIAL CALL TO POPULATE INDEX TEMPLATE (ALL_SHIFT)
-    WHITH RELEVANT DATA Shift & Member data
+    """
+    from shifts cache,
+    generate shift payload
+    generate shift registration payload
+    
+    emit:
+        emit payload to populate client
+        with shifts and shifts registrations
     """
     global cache
     
@@ -42,12 +60,18 @@ def init_all_shifts():
 
 
 @socketio.on('confirm-presence')
-def confirm_presence(context: dict):
-    """RESPONSE TO CLIENT CONFIRMING PRESENCE TO SHIFT.
-    MODIFY SHIFT.REGISTRATION STATE BY "done".
-
-    Args:
-        context (dict): _description_
+def confirm_presence(context: Dict[str, Any]):
+    """
+    modify status of shift registration record
+    
+    context:
+        registration_id: shift registration record id to update
+        shift_id       : shift record id containing registration to update
+        partner_id     : search cache member to update status localy.
+    
+    emit:
+        broadcast new status for shift registration.
+        update accordingly the style of the shift registration record.
     """
     global cache
     config = cache["config"]
@@ -68,7 +92,17 @@ def confirm_presence(context: dict):
 
 
 @socketio.on('search-member')
-def search_member(context):
+def search_member(context: Dict[str, Any]):
+    """
+    On client searching member to create shift registration record
+    search corresponding res partner
+    
+    context:
+        input (str): can be string reprensention of int or a name
+        
+    emit:
+        return to client corresponding partners
+    """
     global cache
     
     config = cache["config"]
@@ -98,10 +132,21 @@ def search_member(context):
 
 
 @socketio.on('register-catching-up')
-def register_member_catching_up(context):
-    global cache
+def register_member_catching_up(context: Dict[str, Any]):
+    """
+    determine main member attached to this request.
+    determine if catching up member and select shift type accordingly.
+    create shift registration record from context shared by client
     
-    print(context)
+    context:
+        shift_id  : shift related to the shift registration
+        partner_id: partner related to the shift registration
+        
+    emit:
+        boradcast new shift registration.
+        populate related shift with new record.
+    """
+    global cache
     config = cache["config"]
     
     api = Odoo()
@@ -113,28 +158,29 @@ def register_member_catching_up(context):
         config.API_VERBOSE
     )
     
-    # is the main member
-    (is_assoc, parent_id, stype) = api.associated_member(context["partner_id"])
-    sid = cache["shifts"][int(context["shift_id"])].shift_tikets_id.get("ftop")
     
-    if is_assoc:
-        service = api.register_member_to_shift(
-            int(context["shift_id"]),
-            int(parent_id),
-            sid,
-            stype
-        )
-    
+    member = api.get("res.partner", [("id", "=", context["partner_id"])])
+    if member.is_associated_people:
+        main_member = api.get("res.partner", [("id", "=", member.parent_id)])
     else:
-        service = api.register_member_to_shift(
-            int(context["shift_id"]),
-            int(context["partner_id"]),
-            sid,
-            stype
-        )
+        main_member = member
+            
+    stype = main_member.shift_type
+    if stype == "standard":
+        std_points = main_member.final_standard_point
+        stype = get__appropriate_stype(stype, std_points)
+    stid = cache["shifts"][int(context["shift_id"])].shift_tikets_id.get(stype)
+    
+    service = api.register_member_to_shift(
+        int(context["shift_id"]),
+        int(main_member.id),
+        stid,
+        stype
+    )
     
     member = api.create_main_member(service)
     cache["shifts"][int(context["shift_id"])].members[int(context["partner_id"])] = member
+    
     payload = {
         "shift_id": int(context["shift_id"]),
         "members": member.payload()

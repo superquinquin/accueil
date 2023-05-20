@@ -5,8 +5,9 @@ TROUGHT ERPPEEK
 
 import time
 import erppeek
+from erppeek import Record, RecordList
 from datetime import datetime, timedelta, date
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 from application.back.shift import Shift
 from application.back.member import Member
@@ -54,22 +55,22 @@ class Odoo:
                 time.sleep(60)
 
 
-    def get(self, model: str, cond:List[Tuple[str]]) -> erppeek.Record:
+    def get(self, model: str, cond:List[Tuple[str]]) -> Record:
         """short for odoo client get method"""
         return self.client.model(model).get(cond)
     
-    def browse(self, model:str, cond:List[Tuple[str]]) -> erppeek.RecordList:
+    def browse(self, model:str, cond:List[Tuple[str]]) -> RecordList:
         """short for odoo client browse method"""
         return self.client.model(model).browse(cond)
     
-    def create(self, model:str, object:dict) -> erppeek.Record:
+    def create(self, model:str, object:Dict[str, Any]) -> Record:
         """short for odoo client create method"""
         return self.client.model(model).create(object)
     
 
 
     ###### IMPL FETCH SHIFTS ##############
-    def fetch_today_shifts(self, cache: dict) -> dict:
+    def fetch_today_shifts(self, cache: Dict[str, Any]) -> Dict[str, Any]:
         """SHIFTS STRUCT CONSTRUCTOR
         FETCH TODAY SHIFTS TRHOUGH ERPPEEK API
         COLLECT INTO "SHIFTS" CACHE
@@ -126,7 +127,7 @@ class Odoo:
     
     #### IMPL FETCH MEMBERS ####
     
-    def fetch_shifts_assigned_members(self, cache:dict) -> dict:
+    def fetch_shifts_assigned_members(self, cache: Dict[str, Any]) -> Dict[str, Any]:
         """MEMBER STRUCT CONSTRUCTOR
         FETCH ASSIGNED MEMBERS TO ASSOCIATED SHIFTS
         COLLECT THEM INTO RELATED SHIFT.MEMBERS FIELD
@@ -139,7 +140,7 @@ class Odoo:
         """
         members = self.browse("shift.registration", 
                              [("shift_id", "in", list(cache["shifts"].keys())),
-                              ("state", "not in", ["cancel", "waiting", "draft"])]
+                              ("state", "not in", ["cancel", "waiting", "draft", "replaced"])]
                 )
         
         for m in members:
@@ -151,7 +152,7 @@ class Odoo:
         return cache
     
     
-    def create_main_member(self, m: erppeek.Record):
+    def create_main_member(self, m: Record):
             member_id = m.partner_id.id
             shift_id = m.shift_id.id
             registration_id = m.id
@@ -257,32 +258,22 @@ class Odoo:
         
         
     
-    def post_absence(self, services) -> None:
+    def post_absence(self, services: RecordList) -> None:
         """
         TIMED THREAD LAUCHED BY SCHEDULER STRUCT RUNNER
         UPDATING SHIFT.REGISTRATION STATUS
         OF MEMBERS THAT HAVE NOT BEEN PRESENT DURING TODAY SHIFT
         SELECT ALL OPEN REGISTRATION FROM LAST 24H, UNLESS MEMBER IS EXEMPTED
         APPLY "ABSENT" STATUS TO THEM
-        
-        OPTIONAL: CLOSING SHIFT ?
         """
         print('updating absence status')
-        # now = datetime.now()
-        # floor = now - timedelta(hours=24)
-        
-        # services = self.browse(
-        #     "shift.registration",
-        #     [("date_begin",">=", floor.isoformat()),
-        #     ("date_begin","<=", now.isoformat()),
-        #     ("state","=", "open")]
-        # )
         ids = [s.id for s in services if self.is_not_exempted(s.partner_id.id)]
         self.client.write("shift.registration",ids, {"state": "absent"})
         
     
     
-    def close_shift(self, shift):
+    def _close_shift(self, shift: Record) -> None:
+        """close shift record"""
         print('closing shift')
         
         try:
@@ -293,7 +284,16 @@ class Odoo:
             pass
     
     
-    def closisng_shifts_routine(self):
+    def closing_shifts_routine(self) -> None:
+        """
+        details:
+            select all shift registration of last h24
+            select all shift of last h24
+            
+            start closing routine:
+            - set open shift/waiting shift registration state to absent
+            - close shift records
+        """
         now = datetime.now()
         floor = now - timedelta(hours=24)
         
@@ -301,7 +301,7 @@ class Odoo:
             "shift.registration",
             [("date_begin",">=", floor.isoformat()),
             ("date_begin","<=", now.isoformat()),
-            ("state","=", "open")]
+            ("state","in", ["open", "waiting"])]
         )        
         
         shifts = self.browse(
@@ -312,7 +312,7 @@ class Odoo:
         )
 
         self.post_absence(services)
-        [self.close_shift(shift) for shift in shifts]
+        [self._close_shift(shift) for shift in shifts]
     
     
     
@@ -334,34 +334,19 @@ class Odoo:
         return exemption
     
     
-    
-    
-    
-    def associated_member(self, partner_id):
-        m = self.get(
-            "res.partner", 
-            [("id", "=", partner_id)]
-        )
-        
-        return (m.is_associated_people, 
-                m.parent_id,
-                m.shift_type)
-    
-    
-    def main_member_from_associated(self, is_parent_id):
-        m = self.get(
-            "res.partner", 
-            [("id", "=", is_parent_id)]
-        )
-        
-    
-    
+
     def register_member_to_shift(
         self, 
-        shift_id, 
-        partner_id, 
-        shift_ticket_id, 
-        stype) -> erppeek.Record:
+        shift_id: int, 
+        partner_id: int, 
+        shift_ticket_id: int, 
+        stype: str
+        ) -> Record:
+        
+        """
+        ADD shift registration record
+        Set record state to done
+        """
 
         service = self.create(
             "shift.registration",
@@ -374,7 +359,7 @@ class Odoo:
             "state": 'open'
             }
         )
-        service.state = "done"
         
+        service.state = "done"
         return service
 

@@ -31,7 +31,7 @@ function createShiftBubble(context) {
     let catchUp = document.createElement("button");
     catchUp.classList.add("catchUpBtn");
     catchUp.setAttribute("onclick", "askCatchingUp("+context.shift_id+")");
-    catchUp.innerHTML = "Rattrapage";
+    catchUp.innerHTML = "S'inscrire";
     header.appendChild(catchUp);
 
     shift.appendChild(header)

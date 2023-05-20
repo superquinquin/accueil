@@ -2,7 +2,7 @@
 IMPL MEMBER STRUCT
 MIRROR ODOO RES.PARTNER MODEL WITH FEW USEFUL FIELDS
 """
-from typing import Union
+from typing import Union, Dict, Any
 
 class Member:
     def __init__(
@@ -36,7 +36,7 @@ class Member:
         self.associate: Union[None, Member] = member
         
     
-    def generate_display_name(self):
+    def generate_display_name(self) -> None:
         """DISPLAY NAME TEMPLATE FOR CLIENT.
         CONTAINING Partner_id, Partner_id.name AND ASSOCIATED Partner_id.name
         """
@@ -45,7 +45,8 @@ class Member:
         else:
             self.display_name = f"{self.barcode} - {self.name}"
             
-    def payload(self) -> dict:
+            
+    def payload(self) -> Dict[str, Any]:
         """BUILD PAYLOAD WITH MEMBER NECESSARY DATA
 
         Returns:
