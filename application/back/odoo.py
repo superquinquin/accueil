@@ -138,10 +138,11 @@ class Odoo:
         Returns:
             dict: updated cache
         """
-        members = self.browse("shift.registration", 
-                             [("shift_id", "in", list(cache["shifts"].keys())),
-                              ("state", "not in", ["cancel", "waiting", "draft", "replaced"])]
-                )
+        members = self.browse(
+            "shift.registration", 
+            [("shift_id", "in", list(cache["shifts"].keys())),
+            ("state", "not in", ["cancel", "waiting", "replaced"])]
+        )
         
         for m in members:
             member_id = m.partner_id.id
@@ -301,7 +302,7 @@ class Odoo:
             "shift.registration",
             [("date_begin",">=", floor.isoformat()),
             ("date_begin","<=", now.isoformat()),
-            ("state","in", ["open", "waiting"])]
+            ("state","in", ["open"])]
         )        
         
         shifts = self.browse(
