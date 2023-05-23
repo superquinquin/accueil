@@ -302,7 +302,7 @@ class Odoo:
             "shift.registration",
             [("date_begin",">=", floor.isoformat()),
             ("date_begin","<=", now.isoformat()),
-            ("state","in", ["open"])]
+            ("state","in", ["open", "draft"])]
         )        
         
         shifts = self.browse(
