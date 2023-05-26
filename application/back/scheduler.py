@@ -190,7 +190,9 @@ class Scheduler:
         if len(self.routine) > 0:
             task = self.routine.popleft()
             delay = get_delay(task[1])
-            print(f"next task: {task} - scheduled in {delay} sec")
+            print("_________________________________________________________________")
+            print(f"[{datetime.now().strftime('%d-%m-%Y %H:%M:%S')}] next task: {task} - scheduled in {delay} sec")
+            print("_________________________________________________________________")
             timer = Timer(delay, self._execute, [task, cache])
             timer.start()
         else:

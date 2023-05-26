@@ -11,13 +11,12 @@ def translate_day(name: str) -> str:
             return d[1]
         
 
-def get_delay(time: datetime.time) -> int:
-    now = datetime.now().time()
-    
-    return (abs(time.hour - now.hour) * 60 +
-            abs(time.minute - now.minute)) * 60
+def get_delay(time: datetime.time) -> float:
+    now = datetime.now()
+    next_task = datetime.now().replace(hour=time.hour,minute=time.minute)
+    return (next_task - now).total_seconds()
 
-def get_delay_from_datetime(time:Tuple[int, int, int]) -> int:
+def get_delay_from_datetime(time:Tuple[int, int, int]) -> float:
     """gte delay in sec between specific time and a delta"""
     now = datetime.now()
     next_start = (now.replace(hour=time[0], 
