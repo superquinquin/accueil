@@ -91,6 +91,28 @@ def confirm_presence(context: Dict[str, Any]):
     emit('update-on-presence', context,  broadcast=True, include_self=True)
 
 
+@socketio.on("reset-presence")
+def reset_presence(context: Dict[str, Any]):
+    global cache
+    config = cache["config"]
+    api = Odoo()
+    api.connect(
+        config.API_URL, 
+        config.SERVICE_ACCOUNT_LOGGIN, 
+        config.SERVICE_ACCOUNT_PASSWORD, 
+        config.API_DB, 
+        config.API_VERBOSE
+    )
+    
+    api.post_to_open(context['registration_id'])
+    shift  = cache["shifts"][context["shift_id"]]
+    member = shift.members[context["partner_id"]]
+    member.state = "open"
+    emit('update-on-reset', context,  broadcast=True, include_self=True)
+
+
+
+
 @socketio.on('search-member')
 def search_member(context: Dict[str, Any]):
     """

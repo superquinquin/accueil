@@ -257,7 +257,19 @@ class Odoo:
         service.state = "done"
         
         
-        
+    def post_to_open(self, registration_id: int) -> None:
+        """ON CLIENT reseting presence CONFIRMATION
+        CALL ON SHIFT.REGISTRATION MODEL
+        SET SHIFT.REGISTRATION ROW STATUS TO "open"
+
+        Args:
+            registration_id (int): shift.registration Id key
+        """
+        service = self.get(
+            "shift.registration", 
+            [("id", "=", registration_id)]
+        )
+        service.state = "open"
     
     def post_absence(self, services: RecordList) -> None:
         """

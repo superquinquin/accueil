@@ -49,6 +49,7 @@ function createShiftBubble(context) {
             li.setAttribute('onclick', "askConfirmation("+m.registration_id+")");
             li.classList.add("open");
         } else {
+            li.setAttribute('onclick', "askConfirmationReset("+m.registration_id+")");
             li.classList.add("done");
             let span = document.createElement("span");
             span.innerHTML = "✓";
@@ -120,9 +121,28 @@ function askConfirmation(registration_id) {
     );
 }
 
+function askConfirmationReset(registration_id) {
+    let row = document.getElementById(registration_id);
+    let member_id = parseInt(row.getAttribute('partner_id'));
+    let shift_id = parseInt(row.getAttribute('shift_id'));
+
+    let body = "Bonjour, Voullez vous annuler la présence de "+row.innerHTML.split('-')[1].split("✓")[0];
+    let payload = registration_id+", "+member_id+", "+shift_id;
+    openCModal(
+        "Annuler sa présence",
+        body,
+        "confirmedReset("+payload+")"
+    );
+}
+
 
 function confirmedPresence(reg_id, partner_id, shift_id) {
     socket.emit("confirm-presence", {"registration_id":reg_id, "partner_id": partner_id, "shift_id": shift_id})
+    CloseCModal()
+}
+
+function confirmedReset(reg_id, partner_id, shift_id) {
+    socket.emit("reset-presence", {"registration_id":reg_id, "partner_id": partner_id, "shift_id": shift_id})
     CloseCModal()
 }
 
@@ -240,6 +260,7 @@ function regiesterCatchUp() {
 socket.on('update-on-presence', function(context) {
     console.log('updating status')
     let row = document.getElementById(context.registration_id);
+    row.setAttribute('onclick', "askConfirmationReset("+context.registration_id+")");
     let span = document.createElement("span");
     span.innerHTML = "✓";
 
@@ -248,6 +269,18 @@ socket.on('update-on-presence', function(context) {
     row.classList.add("done");
     row.appendChild(span);
 });
+
+socket.on('update-on-reset', function(context) {
+    console.log('updating status')
+    let row = document.getElementById(context.registration_id);
+    row.setAttribute('onclick', "askConfirmation("+context.registration_id+")");
+    row.getElementsByTagName("span")[0].remove()
+    row.setAttribute("state", "open");
+    row.classList.add("open");
+    row.classList.remove("done");
+});
+
+
 
 socket.on('populate-search-members', function(context) {
     console.log('updating members list')
