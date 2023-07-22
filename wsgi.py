@@ -3,7 +3,7 @@ monkey.patch_all()
 
 from application import create_app, socketio
 from application.config import parser
-
+app = create_app(parser().config)
 
 banner = """\
       ___           ___           ___           ___           ___           ___           ___           ___                       ___ 
@@ -24,6 +24,5 @@ banner = """\
 
 if __name__ == '__main__':
     print(banner)
-    app = create_app(parser().config)
     socketio.run(app)
     #http://localhost:5000/
