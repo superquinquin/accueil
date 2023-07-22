@@ -70,11 +70,12 @@ body {
 /* MEMBERS STYLE */
 .shift li {
     margin: 5px 20px 5px 20px;
-    padding: 10px 20px 0px 20px;
-    height: 30px;
+    padding: 10px 20px 10px 20px;
+    min-height: 30px;
     border-radius: 5px;
     flex-direction: row;
     align-items: center;
+    
 }
 
 .open {
@@ -96,9 +97,9 @@ body {
 }
 
 .done span {
-  float: right;
+  /* float: right; */
   font-size: 30px;
-  margin-top: -7px;
+  padding-left: 10px;
 }
 
 /* #CFF2E8    #4FCFAB*/
