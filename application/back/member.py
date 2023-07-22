@@ -41,9 +41,9 @@ class Member:
         CONTAINING Partner_id, Partner_id.name AND ASSOCIATED Partner_id.name
         """
         if self.has_associated_member:
-            self.display_name = f"{self.barcode} - {self.name} en binôme avec {self.associate.name}"
+            self.display_name = f"<strong>{self.barcode}</strong> - {self.name} en binôme avec {self.associate.name}"
         else:
-            self.display_name = f"{self.barcode} - {self.name}"
+            self.display_name = f"<strong>{self.barcode}</strong> - {self.name}"
             
             
     def payload(self) -> Dict[str, Any]:

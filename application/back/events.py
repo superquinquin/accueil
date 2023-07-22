@@ -139,7 +139,14 @@ def search_member(context: Dict[str, Any]):
     )
 
     if context["input"].isnumeric():
-        m = api.get("res.partner", [("barcode_base","=", context["input"])])
+        m = api.get(
+            "res.partner", 
+            [
+                ("barcode_base","=", context["input"]), 
+                ("cooperative_state", "not in", ["unsubscribed"]),
+                ("is_member", "=", True)
+            ]
+        )
         members = tuple((m.id, m.barcode_base, m.name))
         l = 1
     

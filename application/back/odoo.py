@@ -126,8 +126,8 @@ class Odoo:
         return cache
     
     #### IMPL FETCH MEMBERS ####
-    
-    def fetch_shifts_assigned_members(self, cache: Dict[str, Any]) -> Dict[str, Any]:
+
+    def populate_shifts_with_members(self, cache: Dict[str, Any]) -> Dict[str, Any]:
         """MEMBER STRUCT CONSTRUCTOR
         FETCH ASSIGNED MEMBERS TO ASSOCIATED SHIFTS
         COLLECT THEM INTO RELATED SHIFT.MEMBERS FIELD
@@ -138,20 +138,24 @@ class Odoo:
         Returns:
             dict: updated cache
         """
+        for sid in cache["shifts"].keys():
+            cache = self.fetch_shift_members(sid, cache)
+        return cache
+
+
+    def fetch_shift_members(self, sid: int, cache: Dict[str, Any]) -> Dict[str, Any]:
         members = self.browse(
-            "shift.registration", 
-            [("shift_id", "in", list(cache["shifts"].keys())),
-            ("state", "not in", ["cancel", "waiting", "replaced"])]
+            "shift.registration",
+            [
+                ("shift_id", "=", sid),
+                ("state", "not in", ["cancel", "waiting", "replaced"])
+            ]
         )
-        
         for m in members:
             member_id = m.partner_id.id
-            shift_id = m.shift_id.id
             member = self.create_main_member(m)
-            cache["shifts"][shift_id].members[member_id] = member
-            
+            cache["shifts"][sid].members[member_id] = member
         return cache
-    
     
     def create_main_member(self, m: Record):
             member_id = m.partner_id.id

@@ -79,7 +79,7 @@ class Scheduler:
         
         cache["shifts"] = {}
         cache = api.fetch_today_shifts(cache)
-        cache = api.fetch_shifts_assigned_members(cache)
+        cache = api.populate_shifts_with_members(cache)
         self._new_routine(cache)
         self._ROUTINE_RUNNER(cache)
 
@@ -123,6 +123,24 @@ class Scheduler:
         """
         cache["current_shifts"].append(shift)
         return cache
+
+    def fetch(
+        self, 
+        shift: Shift, 
+        cache: Dict[str, Any]
+        ) -> Dict[str, Any]:
+        """fetch shift registration to catch any possible registrations updates"""
+        
+        config = cache['config']
+        api = Odoo()
+        api.connect(
+            config.API_URL, 
+            config.SERVICE_ACCOUNT_LOGGIN, 
+            config.SERVICE_ACCOUNT_PASSWORD, 
+            config.API_DB, 
+            config.API_VERBOSE
+        )
+        return api.fetch_shift_members(shift.id, cache)
 
     def _clear_passed_tasks(
         self, 
@@ -172,6 +190,8 @@ class Scheduler:
         for shift in list(cache["shifts"].values()):
             begin = datetime.strptime(shift.begin, "%Hh%M") - timedelta(minutes=early)
             end = datetime.strptime(shift.end, "%Hh%M") + timedelta(minutes=late)
+            fetcher = begin - timedelta(minutes=5)
+            tasks.append((shift.id, fetcher.time(), self.fetch))
             tasks.append((shift.id, begin.time(), self.add))
             tasks.append((shift.id, end.time(), self.rm))      
         tasks.sort(key=lambda x: x[1])
