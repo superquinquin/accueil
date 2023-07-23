@@ -7,7 +7,7 @@ import time
 import erppeek
 from erppeek import Record, RecordList
 from datetime import datetime, timedelta, date
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Union
 
 from application.back.shift import Shift
 from application.back.member import Member
@@ -68,7 +68,36 @@ class Odoo:
         return self.client.model(model).create(object)
     
 
-
+    def fetch_members_from_barcode(self, barcode_base: str):
+        m = self.get(
+            "res.partner", 
+            [
+                ("barcode_base","=", barcode_base), 
+                ("cooperative_state", "not in", ["unsubscribed"]),
+                ("is_member", "=", True)
+            ]
+        )
+        if not m:
+            return ([], 0)
+        
+        members, l = tuple((m.id, m.barcode_base, m.name)), 1
+        return (members, l)
+    
+    def fetch_members_from_name(self, name:str):
+        m = self.browse(
+            "res.partner",
+            [
+                ("name","ilike", name),
+                ("cooperative_state", "not in", ["unsubscribed"]),
+                ("is_member", "=", True)
+            ]
+        )
+        members = [tuple((mb.id, mb.barcode_base, mb.name)) for mb in m] 
+        l = len(members)
+        
+        return (members, l)
+    
+    
     ###### IMPL FETCH SHIFTS ##############
     def fetch_today_shifts(self, cache: Dict[str, Any]) -> Dict[str, Any]:
         """SHIFTS STRUCT CONSTRUCTOR

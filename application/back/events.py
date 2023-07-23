@@ -139,22 +139,9 @@ def search_member(context: Dict[str, Any]):
     )
 
     if context["input"].isnumeric():
-        m = api.get(
-            "res.partner", 
-            [
-                ("barcode_base","=", context["input"]), 
-                ("cooperative_state", "not in", ["unsubscribed"]),
-                ("is_member", "=", True)
-            ]
-        )
-        members = tuple((m.id, m.barcode_base, m.name))
-        l = 1
-    
+        members, l = api.fetch_members_from_barcode(context["input"])
     else:
-        m = api.browse("res.partner", [("name","ilike", context["input"])])
-        members = [tuple((mb.id, mb.barcode_base, mb.name)) for mb in m] 
-        l = len(members)
-        
+        members, l = api.fetch_members_from_name(context["input"])
     socketio.emit("populate-search-members", {"members":members, "l": l}, include_self= True)
 
 
