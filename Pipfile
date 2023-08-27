@@ -12,6 +12,7 @@ werkzeug = "==2.2.3"
 gevent = "*"
 erppeek = "*"
 uwsgi = "*"
+python-dateutil = "==2.8.2"
 
 [dev-packages]
 
