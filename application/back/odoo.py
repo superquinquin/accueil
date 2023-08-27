@@ -7,10 +7,13 @@ import time
 import erppeek
 from erppeek import Record, RecordList
 from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
+from dateutil.parser import parser
 from typing import List, Tuple, Dict, Any, Union
 
 from application.back.shift import Shift
 from application.back.member import Member
+from application.back.mail import Mail
 from application.back.utils import translate_day, reject_particular_shift
 
 class Odoo:
@@ -173,6 +176,11 @@ class Odoo:
 
 
     def fetch_shift_members(self, sid: int, cache: Dict[str, Any]) -> Dict[str, Any]:
+        cycles = {
+            "abcd": self.fetch_cycle("Service volants - DSam. - 21:00", "ABCD"), 
+            "cdab": self.fetch_cycle("Service volants - BSam. - 21:00", "CDAB")
+        }
+
         members = self.browse(
             "shift.registration",
             [
@@ -180,38 +188,98 @@ class Odoo:
                 ("state", "not in", ["cancel", "waiting", "replaced"])
             ]
         )
+
         for m in members:
             member_id = m.partner_id.id
-            member = self.create_main_member(m)
+            member = self.create_main_member(m, cycles)
             cache["shifts"][sid].members[member_id] = member
+
         return cache
     
-    def create_main_member(self, m: Record):
+    def fetch_cycle(self, shift_name: str, cycle_name: str):
+        """
+        names:
+        "Service volants - DSam. - 21:00"
+        "Service volants - BSam. - 21:00"
+        """
+        cycle = self.browse(
+            "shift.shift", 
+            [
+                ("date_begin",">", datetime.now()), 
+                ("date_begin","<=", datetime.now() + relativedelta(days=28)), 
+                ("name", "=", shift_name)
+            ]
+        )
+        
+        if len(cycle) > 1:
+            # must handle that ... but might not happen actually
+            cycle = cycle[0]
+        else:
+            cycle = cycle[0]
+
+        end_date_dt = parser().parse(timestr=cycle.date_begin)
+        delta = (datetime.now() - (end_date_dt + relativedelta(days=-28))).total_seconds()
+        cycle_start_date = (datetime.now() + relativedelta(seconds=-delta, days=2)).strftime("%d/%m/%Y")
+        cycle_end_date = end_date_dt.strftime("%d/%m/%Y")
+        return (cycle_name, cycle_start_date, cycle_end_date, cycle.id)
+
+    def is_from_cycle(self, cycle_id:int, member_id: int):
+        reg =  self.get("shift.registration", [("shift_id", "=", cycle_id), ("partner_id.id", "=", member_id)])
+        if reg:
+            return True
+        else:
+            return False
+        
+        
+    
+    def create_main_member(self, m: Record, cycles: Dict[str, Any]):
             member_id = m.partner_id.id
             shift_id = m.shift_id.id
             registration_id = m.id
             has_associated_member = m.partner_id.nb_associated_people
             is_associated_member = m.partner_id.is_associated_people
+            dt = parser().parse(m.date_begin)
+            date = dt.strftime("%d/%m/%Y")
+            start_hours = (dt + relativedelta(hours=2)).strftime("%HH%M")
+            end_hours = (dt + relativedelta(hours=4, minutes=45)).strftime("%HH%M")
             print(f"{member_id} - {shift_id} - {m.name} - {has_associated_member}")
-
+            
+            cycle_type, start_cycle, end_cyle = "standard", None, None
+            for (name, start_date, end_date, sid) in cycles.values():
+                from_cycle = self.is_from_cycle(sid, member_id)
+                if from_cycle:
+                    cycle_type = name
+                    start_cycle = start_date
+                    end_cyle = end_date
+                    break
+                
             if has_associated_member > 0:
                 has_associated_member, assoc = self.fetch_associated_member(m.partner_id.id)
             else:
                 assoc = None
-            
+                
             member = Member(
-                member_id,
-                shift_id,
-                registration_id,
-                None,
-                m.name,
-                m.partner_id.barcode_base,
-                has_associated_member,
-                is_associated_member,
-                m.shift_type,
-                m.exchange_state,
-                m.state,
-                assoc
+                id=member_id,
+                shift_id=shift_id,
+                registration_id=registration_id,
+                name=m.name,
+                date=date,
+                start_hours=start_hours,
+                end_hours=end_hours,
+                barcode=m.partner_id.barcode_base,
+                has_associated_member=has_associated_member,
+                is_associated_member=is_associated_member,
+                shift_type=m.shift_type,
+                exchange_state=m.exchange_state,
+                state=m.state,
+                member=assoc,
+                cycle_type=cycle_type,
+                start_cycle=start_cycle,
+                end_cycle=end_cyle,
+                std_counter=int(m.partner_id.final_standard_point),
+                ftop_counter=int(m.partner_id.final_ftop_point),
+                gender=m.partner_id.gender or None,
+                mail=m.partner_id.email or None
             )
             
             member.generate_display_name()
@@ -239,30 +307,24 @@ class Odoo:
   
         try:
             """MEMBERS ARE SUPPOSED TO HAVE 1 ASSOCIATE MAX"""
-            m = self.get("res.partner", 
-                            [("parent_id", "=", is_parent_id)]
-                )
+            m = self.get(
+                "res.partner", 
+                [("parent_id", "=", is_parent_id)]
+            )
         except ValueError:
             """IF MULTIPLE ASSOCIATED SELECT FIRST ONE"""
-            m = self.browse("res.partner", 
-                                        [("parent_id", "=", is_parent_id)]
-                            )[0]
+            m = self.browse(
+                "res.partner", 
+                [("parent_id", "=", is_parent_id)]
+            )[0]
         
         if m:
             has_associate = True
             member = Member(
-                m.id,
-                None,
-                None,
-                is_parent_id,
-                m.name,
-                m.barcode_base,
-                False,
-                True,
-                None,
-                None,
-                None,
-                None
+                id=m.id,
+                parent_id=is_parent_id,
+                name=m.name,
+                barcode=m.barcode,
             )
             
         else:
@@ -304,7 +366,7 @@ class Odoo:
         )
         service.state = "open"
     
-    def post_absence(self, services: RecordList) -> None:
+    def post_absence(self, services: RecordList, cache: Dict[str, Any]) -> None:
         """
         TIMED THREAD LAUCHED BY SCHEDULER STRUCT RUNNER
         UPDATING SHIFT.REGISTRATION STATUS
@@ -316,6 +378,23 @@ class Odoo:
         ids = [s.id for s in services if self.is_not_exempted(s.partner_id.id)]
         self.client.write("shift.registration",ids, {"state": "absent"})
         
+        if cache["config"]["AUTO_ABS_MAIL"]:
+            config = cache["config"]
+            cycles = {
+                "abcd": self.fetch_cycle("Service volants - DSam. - 21:00", "ABCD"), 
+                "cdab": self.fetch_cycle("Service volants - BSam. - 21:00", "CDAB")
+            }
+            for rid in ids:
+                member = self.create_main_member(rid, cycles)
+                if member.mail:
+                    Mail(
+                        config.EMAIL_LOGIN, 
+                        config.EMAIL_PASSWORD,
+                        config.SMTP_PORT,
+                        config.SMTP_SERVER,
+                        [member.mail]
+                    ).send_abs_mail(member)             
+
     
     
     def _close_shift(self, shift: Record) -> None:
@@ -330,7 +409,7 @@ class Odoo:
             pass
     
     
-    def closing_shifts_routine(self) -> None:
+    def closing_shifts_routine(self, cache: Dict[str, Any]) -> None:
         """
         details:
             select all shift registration of last h24
@@ -340,6 +419,7 @@ class Odoo:
             - set open shift/waiting shift registration state to absent
             - close shift records
         """
+        config = cache["config"]
         now = datetime.now()
         floor = now - timedelta(hours=24)
         
@@ -357,8 +437,10 @@ class Odoo:
              ] + reject_particular_shift()
         )
 
-        self.post_absence(services)
-        [self._close_shift(shift) for shift in shifts]
+        if config.AUTO_ABS_NOTATION:
+            self.post_absence(services, cache)
+        if config.AUTO_CLOSE_SHIFT:
+            [self._close_shift(shift) for shift in shifts]
     
     
     

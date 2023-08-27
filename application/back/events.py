@@ -173,7 +173,11 @@ def register_member_catching_up(context: Dict[str, Any]):
         config.API_DB, 
         config.API_VERBOSE
     )
-    
+
+    cycles = {
+        "abcd": api.fetch_cycle("Service volants - DSam. - 21:00", "ABCD"), 
+        "cdab": api.fetch_cycle("Service volants - BSam. - 21:00", "CDAB")
+    }
     
     member = api.get("res.partner", [("id", "=", context["partner_id"])])
     if member.is_associated_people:
@@ -194,7 +198,7 @@ def register_member_catching_up(context: Dict[str, Any]):
         stype
     )
     
-    member = api.create_main_member(service)
+    member = api.create_main_member(service, cycles)
     cache["shifts"][int(context["shift_id"])].members[int(context["partner_id"])] = member
     
     payload = {

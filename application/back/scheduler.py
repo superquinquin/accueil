@@ -75,7 +75,7 @@ class Scheduler:
             config.API_VERBOSE
         )
         if from_runner:
-            api.closing_shifts_routine()
+            api.closing_shifts_routine(cache)
         
         cache["shifts"] = {}
         cache = api.fetch_today_shifts(cache)
