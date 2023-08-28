@@ -76,7 +76,7 @@ class Member:
         self.mail_name = self.name
         name = self.name.split(",")
         if len(name) > 1:
-            self.mail_name = name[1].Strip()
+            self.mail_name = name[1].strip()
             
     def payload(self) -> Dict[str, Any]:
         """BUILD PAYLOAD WITH MEMBER NECESSARY DATA
