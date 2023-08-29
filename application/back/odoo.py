@@ -193,7 +193,6 @@ class Odoo:
             member_id = m.partner_id.id
             member = self.create_main_member(m, cycles)
             cache["shifts"][sid].members[member_id] = member
-
         return cache
     
     def fetch_cycle(self, shift_name: str, cycle_name: str):
@@ -427,7 +426,7 @@ class Odoo:
             "shift.registration",
             [("date_begin",">=", floor.isoformat()),
             ("date_begin","<=", now.isoformat()),
-            ("state","in", ["open", "draft"])]
+            ("state","in", ["open", "draft", "waiting"])]
         )        
         
         shifts = self.browse(
