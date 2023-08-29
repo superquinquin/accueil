@@ -194,7 +194,6 @@ class Odoo:
             member = self.create_main_member(m, cycles)
             cache["shifts"][sid].members[member_id] = member
             
-        self.closing_shifts_routine(cache)
         return cache
     
     def fetch_cycle(self, shift_name: str, cycle_name: str):
