@@ -193,6 +193,8 @@ class Odoo:
             member_id = m.partner_id.id
             member = self.create_main_member(m, cycles)
             cache["shifts"][sid].members[member_id] = member
+            
+        self.closing_shifts_routine(cache)
         return cache
     
     def fetch_cycle(self, shift_name: str, cycle_name: str):
@@ -377,8 +379,8 @@ class Odoo:
         ids = [s.id for s in services if self.is_not_exempted(s.partner_id.id)]
         self.client.write("shift.registration",ids, {"state": "absent"})
         
-        if cache["config"]["AUTO_ABS_MAIL"]:
-            config = cache["config"]
+        config = cache["config"]
+        if config.AUTO_ABS_MAIL:
             cycles = {
                 "abcd": self.fetch_cycle("Service volants - DSam. - 21:00", "ABCD"), 
                 "cdab": self.fetch_cycle("Service volants - BSam. - 21:00", "CDAB")
@@ -426,7 +428,7 @@ class Odoo:
             "shift.registration",
             [("date_begin",">=", floor.isoformat()),
             ("date_begin","<=", now.isoformat()),
-            ("state","in", ["open", "draft", "waiting"])]
+            ("state","in", ["open", "draft"])]
         )        
         
         shifts = self.browse(
