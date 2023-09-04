@@ -181,7 +181,7 @@ def register_member_catching_up(context: Dict[str, Any]):
     
     member = api.get("res.partner", [("id", "=", context["partner_id"])])
     if member.is_associated_people:
-        main_member = api.get("res.partner", [("id", "=", member.parent_id)])
+        main_member = api.get("res.partner", [("id", "=", member.parent_id.id)])
     else:
         main_member = member
             
@@ -199,7 +199,8 @@ def register_member_catching_up(context: Dict[str, Any]):
     )
     
     member = api.create_main_member(service, cycles)
-    cache["shifts"][int(context["shift_id"])].members[int(context["partner_id"])] = member
+    member_id = main_member.id
+    cache["shifts"][int(context["shift_id"])].members[member_id] = member
     
     payload = {
         "shift_id": int(context["shift_id"]),
