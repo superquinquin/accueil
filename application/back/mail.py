@@ -50,7 +50,7 @@ class Mail(object):
         payload = self.generate_abs_mail_payload(member)
         start_greetings = START_GREETINGS.format(**payload)
         qa = BODY_QA.format(**payload)
-        if member.cycle_type == "standard" and member.ftop_counter > 0:
+        if member.cycle_type == "standard" and int(member.ftop_counter) > 0:
             body_fixe = BODY_FIXE_ANTICIPATION.format(**payload)
             obj = OBJECT_ABS_FIXE.format(**payload)
             body_payload = {
@@ -62,7 +62,7 @@ class Mail(object):
                 "signature": SIGNATURE
             }  
             
-        elif member.cycle_type == "standard" and member.ftop_counter == 0:
+        elif member.cycle_type == "standard" and int(member.ftop_counter) == 0:
             body_fixe = BODY_FIXE_NO_ANTICIPATION.format(**payload)
             obj = OBJECT_ABS_FIXE.format(**payload)
             body_payload = {
@@ -97,9 +97,11 @@ class Mail(object):
                 "end_greetings": END_GREETINGS, 
                 "signature": SIGNATURE
             }  
+        else:
+            print('!!!!!!!!!! WARNING !!!!!!!!!!!!!')
+            print('this member payload cannot be constructed --->', member.display_name)
+            return
     
- 
-     
         body = MAIL_BODY.format(**body_payload)
         msg = self.write({"body": body, "subject": obj})
         try:

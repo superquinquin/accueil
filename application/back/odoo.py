@@ -257,7 +257,6 @@ class Odoo:
                 has_associated_member, assoc = self.fetch_associated_member(m.partner_id.id)
             else:
                 assoc = None
-                
             member = Member(
                 id=member_id,
                 shift_id=shift_id,
@@ -281,7 +280,6 @@ class Odoo:
                 gender=m.partner_id.gender or None,
                 mail=m.partner_id.email or None
             )
-            
             member.generate_display_name()
             return member
     
@@ -375,8 +373,12 @@ class Odoo:
         APPLY "ABSENT" STATUS TO THEM
         """
         print('updating absence status')
-        ids = [s.id for s in services if self.is_not_exempted(s.partner_id.id)]
-        self.client.write("shift.registration",ids, {"state": "absent"})
+        non_exempted = [s for s in services if self.is_not_exempted(s.partner_id.id)]
+        self.client.write(
+            "shift.registration", 
+            [s.id for s in non_exempted], 
+            {"state": "absent"}
+        )
         
         config = cache["config"]
         if config.AUTO_ABS_MAIL:
@@ -384,7 +386,7 @@ class Odoo:
                 "abcd": self.fetch_cycle("Service volants - DSam. - 21:00", "ABCD"), 
                 "cdab": self.fetch_cycle("Service volants - BSam. - 21:00", "CDAB")
             }
-            for rid in ids:
+            for rid in non_exempted:
                 member = self.create_main_member(rid, cycles)
                 if member.mail:
                     Mail(
@@ -405,7 +407,7 @@ class Odoo:
             shift.button_done()
         except Exception as e:
             # marshall none 
-            print("marshall")
+            print(e)
             pass
     
     
