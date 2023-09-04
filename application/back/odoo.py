@@ -77,7 +77,6 @@ class Odoo:
             [
                 ("barcode_base","=", barcode_base), 
                 ("cooperative_state", "not in", ["unsubscribed"]),
-                ("is_member", "=", True)
             ]
         )
         if not m:
@@ -92,7 +91,6 @@ class Odoo:
             [
                 ("name","ilike", name),
                 ("cooperative_state", "not in", ["unsubscribed"]),
-                ("is_member", "=", True)
             ]
         )
         members = [tuple((mb.id, mb.barcode_base, mb.name)) for mb in m] 
