@@ -377,15 +377,18 @@ class Odoo:
                 ("name", 'like', name)
             ]
         )
-        
-        services = self.browse(
-            "shift.registration",
-            [
-                ("shift_id", "=", shift.id), 
-                ("state","in", ["open", "draft"])
-            ]
-        )
-        return (shift, services)
+        if bool(shift):
+            shift = shift[0]
+            services = self.browse(
+                "shift.registration",
+                [
+                    ("shift_id", "=", shift.id), 
+                    ("state","in", ["open", "draft"])
+                ]
+            )
+            return (shift, services)
+        else:
+            return (None, None)
     
     def set_ftop_presence(self, services: RecordList, cache: Dict[str, Any]) -> None:
         config = cache["config"]
@@ -434,9 +437,10 @@ class Odoo:
     def handle_special_shift_closure(self, name: str, cache: Dict[str, Any]) -> None:
         config = cache["config"]
         (shift, services) = self.get_special_shift(name, cache)
-        self.set_ftop_presence(services, cache)
-        if config.AUTO_CLOSE_SHIFT:
-            self._close_shift(shift)
+        if services:
+            self.set_ftop_presence(services, cache)
+            if config.AUTO_CLOSE_SHIFT:
+                self._close_shift(shift)
         
         
 
