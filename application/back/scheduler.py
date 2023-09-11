@@ -76,7 +76,6 @@ class Scheduler:
         )
         if from_runner:
             api.closing_shifts_routine(cache)
-            api.handle_special_shift_closure("Service volants", cache)
         
         cache["shifts"] = {}
         cache = api.fetch_today_shifts(cache)
