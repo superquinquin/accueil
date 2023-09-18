@@ -113,15 +113,14 @@ BODY_VOLANT_NO_ACTIVE = """\
     <strong>Le dernier cycle {cycle_type} s’est terminé le samedi {end_cycle_date}.</strong>
 </p>
 <p>
-    Pour information, ton compteur de services affiche à ce jour {ftop_counter} ( 1 service = +1 ; 1 absence = -1* ; la fin de ton cycle =-1) )
-    <br>
+    Pour information, ton compteur de services affiche à ce jour {ftop_counter} ( 1 service = +1 ; 1 absence = -1* ; la fin de ton cycle =-1))
 </p>
-
-
-Afin d’être à jour et de le rester à la fin de ton cycle {cycle_type} actuel qui aura lieu le samedi {end_cycle_date},
-tu dois effectuer le nombre de services nécessaires**) pour avoir un compteur positif (1 ou plus).
-Il te suffit de t’inscrire sur ton espace membre
-(puis faire ton service de 2h45 et participer au fonctionnement du magasin.
+<p>
+    Afin d’être à jour et de le rester à la fin de ton cycle {cycle_type} actuel qui aura lieu le samedi {end_cycle_date},
+    tu dois effectuer le nombre de services nécessaires**) pour avoir un compteur positif (1 ou plus).
+    Il te suffit de t’inscrire sur ton espace membre
+    (puis faire ton service de 2h45 et participer au fonctionnement du magasin.)
+</p>
 """
 
 # -- COMMON SECTION

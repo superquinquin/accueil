@@ -479,7 +479,8 @@ class Odoo:
                         config.EMAIL_PASSWORD,
                         config.SMTP_PORT,
                         config.SMTP_SERVER,
-                        [member.mail]
+                        config.EMAIL_BDM,
+                        ["member.mail"] 
                     ).send_abs_mail(member)             
 
     
