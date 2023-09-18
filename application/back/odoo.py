@@ -72,7 +72,7 @@ class Odoo:
     
 
     def fetch_members_from_barcode(self, barcode_base: str):
-        m = self.get(
+        m = self.browse(
             "res.partner", 
             [
                 ("barcode_base","=", barcode_base), 
@@ -82,7 +82,9 @@ class Odoo:
         if not m:
             return ([], 0)
         
-        members, l = tuple((m.id, m.barcode_base, m.name)), 1
+        members = [tuple((mb.id, mb.barcode_base, mb.name)) for mb in m] 
+        l = len(members)
+        
         return (members, l)
     
     def fetch_members_from_name(self, name:str):
@@ -93,9 +95,10 @@ class Odoo:
                 ("cooperative_state", "not in", ["unsubscribed"]),
             ]
         )
+        if not m:
+            return ([], 0)
         members = [tuple((mb.id, mb.barcode_base, mb.name)) for mb in m] 
         l = len(members)
-        
         return (members, l)
     
     
@@ -431,6 +434,7 @@ class Odoo:
                         config.EMAIL_PASSWORD,
                         config.SMTP_PORT,
                         config.SMTP_SERVER,
+                        config.EMAIL_BDM,
                         [member.mail]
                     ).send_abs_mail(member, True)      
         

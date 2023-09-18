@@ -12,17 +12,19 @@ class Mail(object):
 
     def __init__(
         self,
-        tx: str, 
+        user: str,
         pw: str, 
         port: int, 
         server: str, 
+        tx: str, 
         rx: List[str]
         ) -> None:
 
-        self.tx = tx
+        self.user = user
         self.pw = pw
         self.port = port
         self.server = server
+        self.tx = tx
         self.rx = rx
 
 
@@ -38,7 +40,7 @@ class Mail(object):
 
     def send(self, msg: MIMEText):
         with smtplib.SMTP(self.server, self.port) as smtp:
-            smtp.login(self.tx, self.pw)
+            smtp.login(self.user, self.pw)
             smtp.starttls()
             smtp.sendmail(
                 self.tx,
