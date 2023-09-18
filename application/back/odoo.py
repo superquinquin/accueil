@@ -480,7 +480,7 @@ class Odoo:
                         config.SMTP_PORT,
                         config.SMTP_SERVER,
                         config.EMAIL_BDM,
-                        ["member.mail"] 
+                        [member.mail] 
                     ).send_abs_mail(member)             
 
     
