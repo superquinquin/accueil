@@ -43,7 +43,8 @@ def reject_particular_shift() -> List[Tuple[str, str, Any]]:
         "Service volants",
         "BDM", 
         "COMPTA", 
-        "INFO"
+        "INFO",
+        "MICR"
     ]
     return [("name", "not like", n) for n in prtclr]
 
