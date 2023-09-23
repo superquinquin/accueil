@@ -9,7 +9,7 @@ from erppeek import Record, RecordList
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
 from dateutil.parser import parser
-from typing import List, Tuple, Dict, Any, Union
+from typing import List, Tuple, Dict, Any, Union, Optional
 
 from application.back.shift import Shift
 from application.back.member import Member
@@ -368,83 +368,106 @@ class Odoo:
         service.state = "open"
     
     
-    def get_special_shift(self, name: str, cache: Dict[str, Any]) -> RecordList:
+    def get_ftop_shift(self) -> Optional[Record]:
         now = datetime.now() + timedelta(hours=8)
         floor = now - timedelta(hours=24)
-        
         shift = self.browse(
             "shift.shift",
             [
                 ("date_begin_tz", ">=", floor.isoformat()),
                 ("date_begin_tz", "<=", now.isoformat()),
-                ("name", 'like', name)
+                ("name", 'like', "Service volants")
             ]
         )
-        if bool(shift):
+        if shift:
             shift = shift[0]
-            services = self.browse(
-                "shift.registration",
-                [
-                    ("shift_id", "=", shift.id), 
-                    ("state","in", ["open", "draft"])
-                ]
-            )
-            return (shift, services)
-        else:
-            return (None, None)
+        return shift or None
     
-    def set_ftop_presence(self, services: RecordList, cache: Dict[str, Any]) -> None:
+    def handle_ftop_shift_enclosure(self, cache: Dict[str, Any]) -> None:
         config = cache["config"]
-        now = datetime.now()
-        floor = now - timedelta(days=27)
-        abs = []
-        all_shift_from_cycle = self.browse(
-            "shift.shift",
-            [
-                ("date_begin_tz", ">=", floor.isoformat()),
-                ("date_begin_tz", "<=", now.isoformat()),
-            ]
-        ).id
+        shift = self.get_ftop_shift()
+        if shift and config.AUTO_CLOSE_SHIFT:
+            self._close_shift(shift)
+    
+    
+    
+    # def get_special_shift(self, name: str, cache: Dict[str, Any]) -> RecordList:
+    #     now = datetime.now() + timedelta(hours=8)
+    #     floor = now - timedelta(hours=24)
+        
+    #     shift = self.browse(
+    #         "shift.shift",
+    #         [
+    #             ("date_begin_tz", ">=", floor.isoformat()),
+    #             ("date_begin_tz", "<=", now.isoformat()),
+    #             ("name", 'like', name)
+    #         ]
+    #     )
+    #     if bool(shift):
+    #         shift = shift[0]
+    #         services = self.browse(
+    #             "shift.registration",
+    #             [
+    #                 ("shift_id", "=", shift.id), 
+    #                 ("state","in", ["open", "draft"])
+    #             ]
+    #         )
+    #         return (shift, services)
+    #     else:
+    #         return (None, None)
+    
+    # def set_ftop_presence(self, services: RecordList, cache: Dict[str, Any]) -> None:
+    #     config = cache["config"]
+    #     now = datetime.now()
+    #     floor = now - timedelta(days=27)
+    #     abs = []
+    #     all_shift_from_cycle = self.browse(
+    #         "shift.shift",
+    #         [
+    #             ("date_begin_tz", ">=", floor.isoformat()),
+    #             ("date_begin_tz", "<=", now.isoformat()),
+    #         ]
+    #     ).id
 
-        for service in services:
-            done = self.browse(
-                "shift.registration",
-                [
-                    ("shift_id", "in", all_shift_from_cycle),
-                    ("partner_id", "=", service.partner_id.id),
-                    ("state", "=", "done")
-                ]
-            )
-            if bool(done):
-                service.state = "done"
-            elif bool(done) is False and config.AUTO_ABS_NOTATION:
-                abs.append(service)
-                service.state = "absent"
+    #     for service in services:
+    #         done = self.browse(
+    #             "shift.registration",
+    #             [
+    #                 ("shift_id", "in", all_shift_from_cycle),
+    #                 ("partner_id", "=", service.partner_id.id),
+    #                 ("state", "=", "done")
+    #             ]
+    #         )
+    #         if bool(done):
+    #             service.state = "done"
+    #         elif bool(done) is False and config.AUTO_ABS_NOTATION:
+    #             abs.append(service)
+    #             service.state = "absent"
         
-        if config.AUTO_ABS_MAIL:
-            cycles = {
-                "abcd": self.fetch_cycle("Service volants - DSam. - 21:00", "ABCD"), 
-                "cdab": self.fetch_cycle("Service volants - BSam. - 21:00", "CDAB")
-            }
-            for rid in abs:
-                member = self.create_main_member(rid, cycles)
-                if member.mail:
-                    Mail(
-                        config.EMAIL_LOGIN, 
-                        config.EMAIL_PASSWORD,
-                        config.SMTP_PORT,
-                        config.SMTP_SERVER,
-                        config.EMAIL_BDM,
-                        [member.mail]
-                    ).send_abs_mail(member, True)      
+    #     if config.AUTO_ABS_MAIL:
+    #         cycles = {
+    #             "abcd": self.fetch_cycle("Service volants - DSam. - 21:00", "ABCD"), 
+    #             "cdab": self.fetch_cycle("Service volants - BSam. - 21:00", "CDAB")
+    #         }
+    #         for rid in abs:
+    #             member = self.create_main_member(rid, cycles)
+    #             if member.mail:
+    #                 Mail(
+    #                     config.EMAIL_LOGIN, 
+    #                     config.EMAIL_PASSWORD,
+    #                     config.SMTP_PORT,
+    #                     config.SMTP_SERVER,
+    #                     config.EMAIL_BDM,
+    #                     [member.mail]
+    #                 ).send_abs_mail(member, True)      
         
-    def handle_special_shift_closure(self, name: str, cache: Dict[str, Any]) -> None:
-        config = cache["config"]
-        (shift, services) = self.get_special_shift(name, cache)
-        if services:
-            self.set_ftop_presence(services, cache)
-            if config.AUTO_CLOSE_SHIFT:
-                self._close_shift(shift)
+    # def handle_special_shift_closure(self, name: str, cache: Dict[str, Any]) -> None:
+    #     config = cache["config"]
+    #     (shift, services) = self.get_special_shift(name, cache)
+    #     if services:
+    #         self.set_ftop_presence(services, cache)
+    #         if config.AUTO_CLOSE_SHIFT:
+    #             self._close_shift(shift)
         
         
 
@@ -487,7 +510,7 @@ class Odoo:
     
     def _close_shift(self, shift: Record) -> None:
         """close shift record"""
-        print('closing shift')
+        print('closing shift: ', f"{shift.id} - {shift.name}")
         
         try:
             shift.button_done()
