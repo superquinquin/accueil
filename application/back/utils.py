@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Tuple, List, Any
  
+NORMAL_SHIFTS_PATTERN = r"^[ABCD]{1}(Lun|Mar|Mer|Jeu|Ven|Sam|Dim)\."
+
 
 def translate_day(name: str) -> str:
     name_part = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"]

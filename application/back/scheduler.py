@@ -73,7 +73,7 @@ class Scheduler:
             config.SERVICE_ACCOUNT_PASSWORD, 
             config.API_DB, 
             config.API_VERBOSE
-        )        
+        )
         if from_runner:
             api.closing_shifts_routine(cache)
             api.handle_ftop_shift_enclosure(cache)

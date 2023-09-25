@@ -5,6 +5,7 @@ TROUGHT ERPPEEK
 
 import time
 import erppeek
+import re
 from erppeek import Record, RecordList
 from datetime import datetime, timedelta, date
 from dateutil.relativedelta import relativedelta
@@ -14,7 +15,7 @@ from typing import List, Tuple, Dict, Any, Union, Optional
 from application.back.shift import Shift
 from application.back.member import Member
 from application.back.mail import Mail
-from application.back.utils import translate_day, reject_particular_shift
+from application.back.utils import translate_day, reject_particular_shift, NORMAL_SHIFTS_PATTERN
 
 class Odoo:
     """ODOO INSTANCE
@@ -114,7 +115,7 @@ class Odoo:
         Returns:
             (dict): cache with updated shifts
         """
-
+        normal_shifts = re.compile(NORMAL_SHIFTS_PATTERN)
         dt_floor= datetime.today().replace(hour=0, 
                                           minute=0, 
                                           second=0, 
@@ -124,12 +125,17 @@ class Odoo:
                                           second=59, 
                                           microsecond=59)
 
-        shifts = self.browse(
-            "shift.shift",
-            [("date_begin_tz", ">=", dt_floor.isoformat()),
-             ("date_begin_tz", "<=", dt_ceiling.isoformat()),
-             ] + reject_particular_shift()
-        )
+        shifts = [
+            shift for shift in
+            self.browse(
+                "shift.shift",
+                [
+                    ("date_begin_tz", ">=", dt_floor.isoformat()),
+                    ("date_begin_tz", "<=", dt_ceiling.isoformat()),
+                ]
+            )
+            if bool(re.search(normal_shifts, shift.name))
+        ]
    
         for shift in shifts:
             print(f"{shift.id} - {shift.name} : {shift.date_begin_tz} - {shift.date_end_tz}")
@@ -533,21 +539,28 @@ class Odoo:
         config = cache["config"]
         now = datetime.now()
         floor = now - timedelta(hours=24)
-        
+        normal_shifts = re.compile(NORMAL_SHIFTS_PATTERN)
+
+        shifts = [
+            shift for shift in 
+            self.browse(
+                "shift.shift",
+                [
+                    ("date_begin_tz", ">=", floor.isoformat()),
+                    ("date_begin_tz", "<=", now.isoformat()),
+                ]
+            )
+            if bool(re.search(normal_shifts, shift.name))
+        ]
+
         services = self.browse(
             "shift.registration",
             [("date_begin",">=", floor.isoformat()),
             ("date_begin","<=", now.isoformat()),
-            ("state","in", ["open", "draft"])]
+            ("state","in", ["open", "draft"]),
+            ("shift_id.id", 'in', [shift.id for shift in shifts])]
         )        
-        
-        shifts = self.browse(
-            "shift.shift",
-            [("date_begin_tz", ">=", floor.isoformat()),
-             ("date_begin_tz", "<=", now.isoformat()),
-             ] + reject_particular_shift()
-        )
-
+            
         if config.AUTO_ABS_NOTATION:
             self.post_absence(services, cache)
         if config.AUTO_CLOSE_SHIFT:
