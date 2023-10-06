@@ -220,24 +220,19 @@ class Odoo:
         if len(cycle) > 1:
             # must handle that ... but might not happen actually
             cycle = cycle[0]
-        else:
+        elif len(cycle) == 1:
             cycle = cycle[0]
-
+        else:
+            return (None, None, None, None)
         end_date_dt = parser().parse(timestr=cycle.date_begin)
         delta = (datetime.now() - (end_date_dt + relativedelta(days=-28))).total_seconds()
         cycle_start_date = (datetime.now() + relativedelta(seconds=-delta, days=2)).strftime("%d/%m/%Y")
         cycle_end_date = end_date_dt.strftime("%d/%m/%Y")
         return (cycle_name, cycle_start_date, cycle_end_date, cycle.id)
 
-    def is_from_cycle(self, cycle_id:int, member_id: int):
-        reg =  self.get("shift.registration", [("shift_id", "=", cycle_id), ("partner_id.id", "=", member_id)])
-        if reg:
-            return True
-        else:
-            return False
+    def is_from_cycle(self, cycle_id:int, member_id: int) -> bool:
+        return bool(self.get("shift.registration", [("shift_id", "=", cycle_id), ("partner_id.id", "=", member_id)]))
         
-        
-    
     def create_main_member(self, m: Record, cycles: Dict[str, Any]):
             member_id = m.partner_id.id
             shift_id = m.shift_id.id
@@ -252,8 +247,7 @@ class Odoo:
             
             cycle_type, start_cycle, end_cyle = "standard", None, None
             for (name, start_date, end_date, sid) in cycles.values():
-                from_cycle = self.is_from_cycle(sid, member_id)
-                if from_cycle:
+                if sid and member_id and self.is_from_cycle(sid, member_id):
                     cycle_type = name
                     start_cycle = start_date
                     end_cyle = end_date
