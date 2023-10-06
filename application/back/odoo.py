@@ -115,7 +115,7 @@ class Odoo:
         Returns:
             (dict): cache with updated shifts
         """
-        normal_shifts = re.compile(NORMAL_SHIFTS_PATTERN)
+        
         dt_floor= datetime.today().replace(hour=0, 
                                           minute=0, 
                                           second=0, 
@@ -125,17 +125,14 @@ class Odoo:
                                           second=59, 
                                           microsecond=59)
 
-        shifts = [
-            shift for shift in
-            self.browse(
-                "shift.shift",
-                [
-                    ("date_begin_tz", ">=", dt_floor.isoformat()),
-                    ("date_begin_tz", "<=", dt_ceiling.isoformat()),
-                ]
-            )
-            if bool(re.search(normal_shifts, shift.name))
-        ]
+        shifts = self.browse(
+            "shift.shift",
+            [
+                ("date_begin_tz", ">=", dt_floor.isoformat()),
+                ("date_begin_tz", "<=", dt_ceiling.isoformat()),
+                ("shift_type_id.id", "=", 1)
+            ]
+        )
    
         for shift in shifts:
             print(f"{shift.id} - {shift.name} : {shift.date_begin_tz} - {shift.date_end_tz}")
@@ -382,7 +379,7 @@ class Odoo:
             [
                 ("date_begin_tz", ">=", floor.isoformat()),
                 ("date_begin_tz", "<=", now.isoformat()),
-                ("name", 'like', "Service volants")
+                ("shift_type_id.id", '=', 2)
             ]
         )
         if shift:
@@ -392,8 +389,149 @@ class Odoo:
     def handle_ftop_shift_enclosure(self, cache: Dict[str, Any]) -> None:
         config = cache["config"]
         shift = self.get_ftop_shift()
-        if shift and config.AUTO_CLOSE_SHIFT:
+        if shift and config.AUTO_CLOSE_FTOP_SHIFT:
             self._close_shift(shift)
+    
+    def post_absence(self, services: RecordList, cache: Dict[str, Any]) -> None:
+        """
+        TIMED THREAD LAUCHED BY SCHEDULER STRUCT RUNNER
+        UPDATING SHIFT.REGISTRATION STATUS
+        OF MEMBERS THAT HAVE NOT BEEN PRESENT DURING TODAY SHIFT
+        SELECT ALL OPEN REGISTRATION FROM LAST 24H, UNLESS MEMBER IS EXEMPTED
+        APPLY "ABSENT" STATUS TO THEM
+        """
+        print('updating absence status')
+        non_exempted = [s for s in services if self.is_not_exempted(s.partner_id.id)]
+        self.client.write(
+            "shift.registration", 
+            [s.id for s in non_exempted], 
+            {"state": "absent"}
+        )
+        
+        config = cache["config"]
+        if config.AUTO_ABS_MAIL:
+            cycles = {
+                "abcd": self.fetch_cycle("Service volants - DSam. - 21:00", "ABCD"), 
+                "cdab": self.fetch_cycle("Service volants - BSam. - 21:00", "CDAB")
+            }
+            for rid in non_exempted:
+                member = self.create_main_member(rid, cycles)
+                if member.mail:
+                    Mail(
+                        config.EMAIL_LOGIN, 
+                        config.EMAIL_PASSWORD,
+                        config.SMTP_PORT,
+                        config.SMTP_SERVER,
+                        config.EMAIL_BDM,
+                        [member.mail] 
+                    ).send_abs_mail(member)             
+
+    
+    
+    def _close_shift(self, shift: Record) -> None:
+        """close shift record"""
+        print('closing shift: ', f"{shift.id} - {shift.name}")
+        
+        try:
+            shift.button_done()
+        except Exception as e:
+            # marshall none 
+            print(e)
+            pass
+    
+    
+    def closing_shifts_routine(self, cache: Dict[str, Any]) -> None:
+        """
+        details:
+            select all shift registration of last h24
+            select all shift of last h24
+            
+            start closing routine:
+            - set open shift/waiting shift registration state to absent
+            - close shift records
+        """
+        config = cache["config"]
+        now = datetime.now()
+        floor = now - timedelta(hours=24)
+  
+        shifts = self.browse(
+            "shift.shift",
+            [
+                ("date_begin_tz", ">=", floor.isoformat()),
+                ("date_begin_tz", "<=", now.isoformat()),
+                ("shift_type_id.id", '=', 1)
+            ]
+        )
+        
+        services = self.browse(
+            "shift.registration",
+            [
+                ("date_begin",">=", floor.isoformat()),
+                ("date_begin","<=", now.isoformat()),
+                ("state","in", ["open", "draft"]),
+                ("shift_id.id", 'in', [shift.id for shift in shifts])
+            ]
+        )        
+                
+        if config.AUTO_ABS_NOTATION:
+            self.post_absence(services, cache)
+        if config.AUTO_CLOSE_SHIFT:
+            [self._close_shift(shift) for shift in shifts]
+    
+    
+    
+    def is_not_exempted(self, partner_id: int) -> bool:
+        """TEST COOPERATIVE STATUS OF MEMBER BEFORE APPLYING ABSENCE STATUS.
+        QUERY res.partner model
+
+        Args:
+            partner_id (int): model member Id key
+
+        Returns:
+            bool: False if member is exempted
+        """
+        exemption = True
+        coop_state = self.get("res.partner", [("id", "=", partner_id)]).cooperative_state
+        
+        if coop_state == "exempted":
+            exemption = False
+        return exemption
+    
+    
+
+    def register_member_to_shift(
+        self, 
+        shift_id: int, 
+        partner_id: int, 
+        shift_ticket_id: int, 
+        stype: str
+        ) -> Record:
+        
+        """
+        ADD shift registration record
+        Set record state to done
+        """
+
+        service = self.create(
+            "shift.registration",
+            {
+            "partner_id": partner_id,
+            "shift_id": shift_id,
+            "shift_type": stype,
+            "shift_ticket_id": shift_ticket_id,
+            "related_shift_state": 'confirm',
+            "state": 'open'
+            }
+        )
+        
+        service.state = "done"
+        return service
+
+    
+    
+    
+    
+    
     
     
     
@@ -475,143 +613,3 @@ class Odoo:
     #         if config.AUTO_CLOSE_SHIFT:
     #             self._close_shift(shift)
         
-        
-
-    
-    def post_absence(self, services: RecordList, cache: Dict[str, Any]) -> None:
-        """
-        TIMED THREAD LAUCHED BY SCHEDULER STRUCT RUNNER
-        UPDATING SHIFT.REGISTRATION STATUS
-        OF MEMBERS THAT HAVE NOT BEEN PRESENT DURING TODAY SHIFT
-        SELECT ALL OPEN REGISTRATION FROM LAST 24H, UNLESS MEMBER IS EXEMPTED
-        APPLY "ABSENT" STATUS TO THEM
-        """
-        print('updating absence status')
-        non_exempted = [s for s in services if self.is_not_exempted(s.partner_id.id)]
-        self.client.write(
-            "shift.registration", 
-            [s.id for s in non_exempted], 
-            {"state": "absent"}
-        )
-        
-        config = cache["config"]
-        if config.AUTO_ABS_MAIL:
-            cycles = {
-                "abcd": self.fetch_cycle("Service volants - DSam. - 21:00", "ABCD"), 
-                "cdab": self.fetch_cycle("Service volants - BSam. - 21:00", "CDAB")
-            }
-            for rid in non_exempted:
-                member = self.create_main_member(rid, cycles)
-                if member.mail:
-                    Mail(
-                        config.EMAIL_LOGIN, 
-                        config.EMAIL_PASSWORD,
-                        config.SMTP_PORT,
-                        config.SMTP_SERVER,
-                        config.EMAIL_BDM,
-                        [member.mail] 
-                    ).send_abs_mail(member)             
-
-    
-    
-    def _close_shift(self, shift: Record) -> None:
-        """close shift record"""
-        print('closing shift: ', f"{shift.id} - {shift.name}")
-        
-        try:
-            shift.button_done()
-        except Exception as e:
-            # marshall none 
-            print(e)
-            pass
-    
-    
-    def closing_shifts_routine(self, cache: Dict[str, Any]) -> None:
-        """
-        details:
-            select all shift registration of last h24
-            select all shift of last h24
-            
-            start closing routine:
-            - set open shift/waiting shift registration state to absent
-            - close shift records
-        """
-        config = cache["config"]
-        now = datetime.now()
-        floor = now - timedelta(hours=24)
-        normal_shifts = re.compile(NORMAL_SHIFTS_PATTERN)
-
-        shifts = [
-            shift for shift in 
-            self.browse(
-                "shift.shift",
-                [
-                    ("date_begin_tz", ">=", floor.isoformat()),
-                    ("date_begin_tz", "<=", now.isoformat()),
-                ]
-            )
-            if bool(re.search(normal_shifts, shift.name))
-        ]
-
-        services = self.browse(
-            "shift.registration",
-            [("date_begin",">=", floor.isoformat()),
-            ("date_begin","<=", now.isoformat()),
-            ("state","in", ["open", "draft"]),
-            ("shift_id.id", 'in', [shift.id for shift in shifts])]
-        )        
-            
-        if config.AUTO_ABS_NOTATION:
-            self.post_absence(services, cache)
-        if config.AUTO_CLOSE_SHIFT:
-            [self._close_shift(shift) for shift in shifts]
-    
-    
-    
-    def is_not_exempted(self, partner_id: int) -> bool:
-        """TEST COOPERATIVE STATUS OF MEMBER BEFORE APPLYING ABSENCE STATUS.
-        QUERY res.partner model
-
-        Args:
-            partner_id (int): model member Id key
-
-        Returns:
-            bool: False if member is exempted
-        """
-        exemption = True
-        coop_state = self.get("res.partner", [("id", "=", partner_id)]).cooperative_state
-        
-        if coop_state == "exempted":
-            exemption = False
-        return exemption
-    
-    
-
-    def register_member_to_shift(
-        self, 
-        shift_id: int, 
-        partner_id: int, 
-        shift_ticket_id: int, 
-        stype: str
-        ) -> Record:
-        
-        """
-        ADD shift registration record
-        Set record state to done
-        """
-
-        service = self.create(
-            "shift.registration",
-            {
-            "partner_id": partner_id,
-            "shift_id": shift_id,
-            "shift_type": stype,
-            "shift_ticket_id": shift_ticket_id,
-            "related_shift_state": 'confirm',
-            "state": 'open'
-            }
-        )
-        
-        service.state = "done"
-        return service
-
