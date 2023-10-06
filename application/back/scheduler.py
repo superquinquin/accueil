@@ -66,6 +66,7 @@ class Scheduler:
         """
         
         config = cache['config']
+        print(f"CURRENT CONFIG:\n- AUTO_ABS_NOTATION : {config.AUTO_ABS_NOTATION}\n- AUTO_CLOSE_SHIFT : {config.AUTO_CLOSE_SHIFT}\n- AUTO_CLOSE_FTOP_SHIFT : {config.AUTO_CLOSE_FTOP_SHIFT}\n- AUTO_ABS_MAIL : {config.AUTO_ABS_MAIL}")
         api = Odoo()
         api.connect(
             config.API_URL, 
