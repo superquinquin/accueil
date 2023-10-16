@@ -198,22 +198,13 @@ function populateMemberList(context) {
     container.innerHTML = "";
 
     let ul = document.createElement("ul");
-    if (context.l == 1) {
+    for (var m of context.members) {
         let li = createCatchingUpMemberBubble(
-            context.members[0], 
-            context.members[1], 
-            context.members[2]
+            m[0],
+            m[1], 
+            m[2]
         );
         ul.appendChild(li);
-    } else {
-        for (var m of context.members) {
-            let li = createCatchingUpMemberBubble(
-                m[0],
-                m[1], 
-                m[2]
-            );
-            ul.appendChild(li);
-        }
     }
     container.appendChild(ul);
 }
@@ -298,7 +289,7 @@ socket.on('update-on-reset', function(context) {
 
 
 socket.on('populate-search-members', function(context) {
-    console.log('updating members list')
+    console.log('updating members list');
     populateMemberList(context);
 });
 
