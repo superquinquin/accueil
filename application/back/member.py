@@ -13,6 +13,7 @@ class Member:
         id: int, 
         name: str, 
         barcode: str,
+        leader: bool = False,
         cycle_type: str = "standard",
         date: Optional[str] = None,
         start_hours: Optional[str] = None,
@@ -40,6 +41,7 @@ class Member:
         self.parent_id: Union[None, int] = parent_id
         self.name: str = name
         self.barcode: int = barcode
+        self.leader: bool = leader
         self.has_associated_member: bool = has_associated_member
         self.is_associated_member: bool = is_associated_member
         
@@ -66,12 +68,14 @@ class Member:
         """DISPLAY NAME TEMPLATE FOR CLIENT.
         CONTAINING Partner_id, Partner_id.name AND ASSOCIATED Partner_id.name
         """
+        self.display_name = f"<strong>{self.barcode}</strong> -"
+        if self.leader:
+            self.display_name += f' <span class="leader">🌟</span> '
         if self.has_associated_member:
-            self.display_name = f"<strong>{self.barcode}</strong> - {self.name} en binôme avec {self.associate.name}"
+            self.display_name += f" {self.name} en binôme avec {self.associate.name}"
         else:
-            self.display_name = f"<strong>{self.barcode}</strong> - {self.name}"
-    
-    
+            self.display_name += f" {self.name}" 
+        
     def generate_mail_name(self) -> None:
         self.mail_name = self.name
         name = self.name.split(",")
@@ -89,7 +93,8 @@ class Member:
             "id": self.id,
             "registration_id": self.registration_id,
             "display_name": self.display_name,
-            "state": self.state
+            "state": self.state,
+            "leader": self.leader
             } 
         
         return d

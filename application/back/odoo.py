@@ -235,6 +235,7 @@ class Odoo:
         
     def create_main_member(self, m: Record, cycles: Dict[str, Any]):
             member_id = m.partner_id.id
+            leader = m.partner_id.is_squadleader
             shift_id = m.shift_id.id
             registration_id = m.id
             has_associated_member = m.partner_id.nb_associated_people
@@ -262,6 +263,7 @@ class Odoo:
                 shift_id=shift_id,
                 registration_id=registration_id,
                 name=m.name,
+                leader=leader,
                 date=date,
                 start_hours=start_hours,
                 end_hours=end_hours,
