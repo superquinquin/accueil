@@ -280,7 +280,12 @@ socket.on('update-on-reset', function(context) {
     console.log('updating status')
     let row = document.getElementById(context.registration_id);
     row.setAttribute('onclick', "askConfirmation("+context.registration_id+")");
-    row.getElementsByTagName("span")[0].remove()
+    let spans = row.getElementsByTagName("span");
+    if (spans.length == 1) {
+        spans[0].remove()
+    } else {
+        spans[1].remove()
+    }
     row.setAttribute("state", "open");
     row.classList.add("open");
     row.classList.remove("done");
