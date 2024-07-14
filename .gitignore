@@ -1,9 +1,9 @@
-application/config.py
-application/static/js/config.js
+dist
+__pycache__
 volume
-*.pickle
-*.log
-*.pyc
-.venv
-docker-compose.yml
-test.py
+mail_templates
+*.env
+old
+dist
+ztest.py
+configs/configs.yaml
