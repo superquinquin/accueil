@@ -13,6 +13,7 @@ from accueil.channel import Channel
 from accueil.mail import MailManager
 from accueil.models.odoo import Odoo
 from accueil.listeners import start_scheduler
+from accueil.middlewares import go_fast, log_exit, error_handler
 from accueil.parsers import get_config
 
 Payload = dict[str, Any]
@@ -48,6 +49,10 @@ class Accueil:
         
         self.app.blueprint(basebp)
         self.app.blueprint(registrationbp)
+        
+        self.app.on_request(go_fast, priority=100)
+        self.app.on_response(log_exit, priority=100)
+        self.app.error_handler.add(Exception, error_handler)
         
         self.app.ctx.channels = {"registration": Channel("registration", [])}
         self.app.ctx.odoo = Odoo.initialize(**odoo["erp"])

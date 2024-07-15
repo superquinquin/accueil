@@ -5,11 +5,21 @@ const websocket = new WebSocket("ws://" + location.host + '/registration');
 
 websocket.addEventListener("message", (event) => {
     let payload = JSON.parse(event.data);
-    let data = payload.data
 
+    // event shift unrelated & without data. implies an early return.
+    switch (payload.message) {
+        case "reload":
+            window.location.reload();
+            return;
+    }
+
+
+
+    let data = payload.data
     let existing_shifts =  referenced_shifts_ids();
+
     if (!existing_shifts.includes(data.shift_id)) {
-        return
+        return;
     }
 
     switch (payload.message) {

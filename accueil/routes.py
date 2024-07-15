@@ -1,16 +1,14 @@
-import asyncio
+import traceback
 import json as js
 from sanic import Blueprint, Request, Websocket
 from sanic.response import json, HTTPResponse
 from sanic_ext import render
-from sanic.exceptions import WebsocketClosed
 
 from accueil.channel import Channel
 from accueil.models.odoo import Odoo
-from accueil.models.shift import ShiftMember, Shift
-from accueil.utils import get_appropriate_shift_type
+from accueil.models.shift import Shift
 
-import traceback
+
 
 basebp = Blueprint("Basebp", "/")
 registrationbp = Blueprint("shiftsbp", "/registration")

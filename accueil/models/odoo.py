@@ -211,7 +211,8 @@ class Odoo(object):
 
     def set_regular_shift_absences(self, shift: Shift) -> list[ShiftMember]:
         absent_members = [member for member in shift.members.values() if (member.coop_state != "exempted" and member.state in ["open", "draft"])]
-        self.client.write("shift.registration", [s.id for s in absent_members], {"state": "absent"})
+        [setattr(member, "state", "absent")  for member in absent_members]
+        self.client.write("shift.registration", [s.registration_id for s in absent_members], {"state": "absent"})
         return absent_members
     
     def set_regular_shifts_absences(self, shifts: list[Shift]) -> list[ShiftMember]:
