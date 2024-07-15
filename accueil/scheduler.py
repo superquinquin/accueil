@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import asyncio
 import logging
 from sanic import Sanic
 from threading import Timer
@@ -11,6 +13,7 @@ from typing import Callable
 
 from accueil.models.odoo import Odoo
 from accueil.models.shift import Shift
+from accueil.channel import Channel
 from accueil.mail import MailManager
 
 logger = logging.getLogger("scheduler")
@@ -24,16 +27,20 @@ class Task(object):
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.action.__name__} shift {self.shift_id} at {self.time.strftime('%H:%M:%S')}>"
     
-    def add(self, app: Sanic) -> None:
+    async def add(self, app: Sanic) -> None:
+        channel: Channel = app.ctx.channels.get("registration")
         shift = app.ctx.shifts.get(self.shift_id, None)
         if shift is None:
             raise KeyError("shift not referenced")
         app.ctx.current_shifts.update({self.shift_id:shift})
-
-    def rm(self, app: Sanic) -> None:
+        await channel.broadcast(json.dumps({"message": "reload", "data": {}}))
+        
+    async def rm(self, app: Sanic) -> None:
+        channel: Channel = app.ctx.channels.get("registration")
         app.ctx.current_shifts.pop(self.shift_id)
+        await channel.broadcast(json.dumps({"message": "reload", "data": {}}))
     
-    def refresh(self, app: Sanic) -> None:
+    async def refresh(self, app: Sanic) -> None:
         cycles = app.ctx.cycles
         odoo: Odoo = app.ctx.odoo
         members = odoo.get_shift_members(self.shift_id, cycles)
@@ -42,9 +49,9 @@ class Task(object):
             raise KeyError("shift not referenced")
         shift.refresh_shift_members(*members)
 
-    def execute(self, app: Sanic) -> None:
+    async def execute(self, app: Sanic) -> None:
         callback = self.action
-        callback(self, app)
+        await callback(self, app)
     
     
 @define
@@ -56,13 +63,13 @@ class Scheduler(object):
         return self.__queue
 
     @classmethod
-    def initialize(cls, app: Sanic) -> Scheduler:
+    async def initialize(cls, app: Sanic) -> Scheduler:
         scheduler = cls()
-        scheduler.initialize_queue(app)
-        # scheduler._RUNNER(app)
+        await scheduler.initialize_queue(app)
+        await scheduler.runner(app)
         return scheduler
                
-    def initialize_queue(self, app: Sanic) -> None:
+    async def initialize_queue(self, app: Sanic) -> None:
         """first tasks of the day"""
         odoo: Odoo = app.ctx.odoo
         
@@ -74,7 +81,7 @@ class Scheduler(object):
         app.ctx.shifts = {shift.shift_id:shift for shift in shifts}
         app.ctx.current_shifts = OrderedDict() # dict[shift_id, Shift]
         self._build_queue(app)
-        self._fast_forward(app)
+        await self._fast_forward(app)
 
     def close(self, app: Sanic) -> None:
         set_absences = app.config.AUTO_ABSENCE_NOTATION or False
@@ -88,11 +95,12 @@ class Scheduler(object):
         mail_manager: MailManager = app.ctx.mail_manager
         
         if set_absences:
-            absences = odoo.set_regular_shifts_absences(shifts)
+            odoo.set_regular_shifts_absences(shifts)
             if close_shifts:
                 [odoo.close_shift(shift) for shift in shifts.values()]
             if send_absence_mails:
-                mail_manager.send_absence_mails(absences)
+                [mail_manager.send_absence_mails(shift) for shift in shifts.values()]
+                
             
         if close_ftop:
             [odoo.close_shift(shift) for shift in ftop_shifts.values()]
@@ -109,29 +117,29 @@ class Scheduler(object):
         tasks.sort(key=lambda x: x.time)
         self.__queue = deque(tasks)        
 
-    def _fast_forward(self, app: Sanic) -> None:
+    async def _fast_forward(self, app: Sanic) -> None:
         while len(self.queue) > 0 and self.queue[0].time < datetime.now():
             task = self.__queue.popleft()
             if task.action.__name__ != "refresh":
-                task.execute(app)
+                await task.execute(app)
 
-    def _close_and_rebuild_queue(self, app: Sanic) -> None:
+    async def _close_and_rebuild_queue(self, app: Sanic) -> None:
         """last tasks of the day"""
         
         # self.close(app)
-        self.initialize_queue(app)
-        # self._RUNNER(app)
+        await self.initialize_queue(app)
         
-    def _RUNNER(self, app: Sanic):
-        if len(self.queue) > 0:  
-            task = self.__queue.popleft()
-            interval = (task.time - datetime.now()).total_seconds()
-            logger.info(f"NEXT TASk {task} in {round(interval, 2)}secs")
-            timer = Timer(interval, task.execute, [app])
-            timer.start()
-        else:
+    async def runner(self, app: Sanic):
+        while True:
+            while len(self.queue) > 0:
+                task = self.__queue.popleft()
+                interval = (task.time - datetime.now()).total_seconds()
+                logger.info(f"NEXT TASk {task} in {round(interval, 2)}secs")
+                await asyncio.sleep(interval)
+                await task.execute(app)
+                
             scheduled_rebuild = datetime.now().replace(hour=0, minute=10, second=0) + timedelta(days=1)
             interval = (scheduled_rebuild - datetime.now()).total_seconds()
             logger.info(f"CLOSING DAY TASK in {round(interval, 2)}secs")
-            timer = Timer(interval, self.close_and_rebuild_queue, [app])
-            timer.start()
+            await asyncio.sleep(interval)
+            await self._close_and_rebuild_queue(app)
