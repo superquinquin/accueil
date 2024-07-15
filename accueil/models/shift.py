@@ -103,6 +103,21 @@ class ShiftMember:
             "display_name": self.display_name
         }
     
+    @property
+    def mail_payload(self) -> dict[str, str]:
+        cycle_end, cycle_type = "", "standard"
+        if self.cycle is not None:
+            cycle_end = self.cycle.end.strftime("%d-%m")
+        if self.cycle_type == "ftop":
+            cycle_type = "volant"
+        return {
+            "mail_name": self.mail_name,
+            "ftop_counter": self.ftop_counter,
+            "std_counter": self.std_counter,
+            "cycle_type": cycle_type,
+            "end_cycle_date": cycle_end
+        }
+    
     @classmethod
     def from_record(cls, record: Record, cycle: Cycle | None = None) -> ShiftMember:
         """shift.registration record"""
@@ -190,6 +205,19 @@ class Shift(object):
             "members": [member.payload for member in self.get_active_members()]
         }
     
+    @property
+    def mail_payload(self) -> dict[str, str]:
+        return {
+            "date": self.begin.strftime("%d-%m"),
+            "start_hours": self.begin.strftime('%H:%M'),
+            "end_hours": self.end.strftime('%H:%M'),
+        }
+    
+    @property
+    def absent_members(self) -> list[ShiftMember]:
+        return [member for member in self.members.values() if member.state == "absent"]
+    
+        
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__}: {self.shift_id} {self.name} {self.state}>"
     

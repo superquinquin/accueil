@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 from attrs import define, field, validators
 from jinja2 import Template
 
-from accueil.models.shift import ShiftMember
+from accueil.models.shift import ShiftMember, Shift
 
 
 ObjMail = BodyMail = Mail = str
@@ -90,10 +90,15 @@ class MailManager(object):
     def register_sender(self, **kwargs: Mail) -> None:
         self.senders.update(kwargs)
         
-    def format_mail(self, member: ShiftMember, template_name: str, tx: str, rx: list[Mail]) -> MIMEText:
-        personalization = self._personalization_payload(member)
+    def format_mail(self, shift: Shift,  member: ShiftMember, template_name: str, tx: str, rx: list[Mail]) -> MIMEText:
+        personalization = self._personalization_payload(shift, member)
         template = self.get_template(template_name)
         sender = self.get_sender(tx)
+        
+        with open(f"./volume/{rx[0]}.txt", "w+") as f:
+            f.write(template.render("obj", **personalization))
+            f.write("\n\n\n")
+            f.write(template.render("body", **personalization))
         return template.to_mimeText(sender, rx, **personalization)
         
 
@@ -132,17 +137,19 @@ class MailManager(object):
             raise KeyError("template name doesn't exist")
         return template
     
-    def _personalization_payload(self, member: ShiftMember) -> dict[str, str]:
+    def _personalization_payload(self, shift: Shift, member: ShiftMember) -> dict[str, str]:
         gender = getattr(member, "gender", "neutral")
         gender_variables = self.variables["on_gender"][gender]
         variables = copy.deepcopy(self.variables["variables"])
         variables.update(gender_variables)
-        variables.update(member.__dict__)
+        variables.update(member.mail_payload)
+        variables.update(shift.mail_payload)
+        print(variables)
         return variables
     
-    def send_absence_mails(self, members: list[ShiftMember]) -> None:
-        tx = self.get_sender("bdm")
-        for member in members:
+    def send_absence_mails(self, shift: Shift) -> None:
+        for member in shift.absent_members:
+            print(member, member.mail)
             if member.mail is None:
                 continue
             rx = [member.mail]
@@ -153,7 +160,10 @@ class MailManager(object):
             elif member.cycle_type == "ftop":
                 template_name = "volant_abs"
 
-            formated_mail = self.format_mail(member, template_name, tx, rx)
-            self.send(tx, rx, formated_mail)
+            formated_mail = self.format_mail(shift, member, template_name, "bdm", rx)
+
+
+
+# self.send(tx, rx, formated_mail)            
                 
                 
