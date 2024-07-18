@@ -15,6 +15,7 @@ from accueil.models.odoo import Odoo
 from accueil.models.shift import Shift
 from accueil.channel import Channel
 from accueil.mail import MailManager
+from accueil.exceptions import UnknownShift
 
 logger = logging.getLogger("scheduler")
 
@@ -31,7 +32,7 @@ class Task(object):
         channel: Channel = app.ctx.channels.get("registration")
         shift = app.ctx.shifts.get(self.shift_id, None)
         if shift is None:
-            raise KeyError("shift not referenced")
+            raise UnknownShift()
         app.ctx.current_shifts.update({self.shift_id:shift})
         await channel.broadcast(json.dumps({"message": "reload", "data": {}}))
         
@@ -46,7 +47,7 @@ class Task(object):
         members = odoo.get_shift_members(self.shift_id, cycles)
         shift: Shift = app.ctx.shifts.get(self.shift_id, None)
         if shift is None:
-            raise KeyError("shift not referenced")
+            raise UnknownShift()
         shift.refresh_shift_members(*members)
 
     async def execute(self, app: Sanic) -> None:
