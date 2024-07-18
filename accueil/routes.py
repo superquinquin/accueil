@@ -1,17 +1,24 @@
+import logging
 import traceback
 import json as js
 from sanic import Blueprint, Request, Websocket
-from sanic.response import json, HTTPResponse
+from sanic.response import json, HTTPResponse, empty
 from sanic_ext import render
 
 from accueil.channel import Channel
 from accueil.models.odoo import Odoo
 from accueil.models.shift import Shift
+from accueil.exceptions import UnknownXmlrcpError
+from accueil.utils import handle_odoo_exceptions
 
-
+logger = logging.getLogger("endpointAccess")
 
 basebp = Blueprint("Basebp", "/")
 registrationbp = Blueprint("shiftsbp", "/registration")
+
+@basebp.get("/favicon.ico")
+async def favicon(_: Request):
+    return empty()
 
 @basebp.get("/")
 async def shifts(request: Request) -> HTTPResponse:
@@ -25,19 +32,28 @@ async def all_shifts(request: Request) -> HTTPResponse:
 
 @basebp.get("/admin")
 async def all_shifts_admin_view(request: Request) -> HTTPResponse:
-    return json()
+    shifts = request.app.ctx.current_shifts.values()
+    return await render("admin.html", context= {"shifts": [shift.admin_payload for shift in shifts]})
+
+@basebp.get("/admin/all")
+async def all_shifts_admin_view(request: Request) -> HTTPResponse:
+    shifts = request.app.ctx.shifts.values()
+    return await render("admin.html", context= {"shifts": [shift.admin_payload for shift in shifts]})
 
 
 @registrationbp.post("/search_member")
 async def search_member(request: Request) -> HTTPResponse:
+    
     data = request.json
     odoo: Odoo = request.app.ctx.odoo
-    
     inp: str = data["input"]
+
     if inp.isnumeric():
         payload = odoo.get_members_from_barcodebase(int(inp))
     else:
         payload = odoo.get_members_from_name(inp)
+        print(payload)
+
     return json({"status": 200, "reasons": "Ok", "data": payload}, status=200)
     
     
@@ -78,7 +94,7 @@ async def registration(request: Request, ws: Websocket):
                 member = odoo.build_member(registration_record, cycles)
                 shift.add_shift_members(member)
                 payload["data"].update({"partner_id": member.partner_id, "html": member.into_html()}) 
-                await ws.send(js.dumps({"message":"CloseCatchingUpModal", "data": payload["data"]}))
+                await ws.send(js.dumps({"message":"closeRegistrationModal", "data": payload["data"]}))
                 
             else:
                 # unintented messages shouldn't be send from the application frame.
@@ -86,8 +102,12 @@ async def registration(request: Request, ws: Websocket):
             
             await channel.broadcast(js.dumps(payload)) 
         except Exception as e:
-            print(traceback.format_exc())
-            print(e)
-        
+            error = handle_odoo_exceptions(e)
+            if isinstance(error, UnknownXmlrcpError):
+                logger.error(traceback.format_exc())
+            else:
+                logger.error(f"{request.host} > {request.method} {request.url} : {str(error)} [{str(error.status)}][{str(len(str(error.message)))}b]")
+            data = {"status": error.status, "reasons": error.message}
+            await ws.send(js.dumps({"message":"error", "data": data}))
         
         

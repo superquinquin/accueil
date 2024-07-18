@@ -9,64 +9,74 @@
         <link rel="stylesheet" href="../static/css/shifts.css">
     </head>
     <body id="body">
-        <div id="confirmation-hub-modal" style="display: none;">
-          <div id="confirmation-container">
-            <div id="confirmation-container-heading">
-              <p id="heading-message"></p>
-            </div>
-            <div id="confirmation-container-content">
+
+      <div id="msg-box" class="fx"></div>
+
+      <div id="confirmation-modal" class="modal-blur">
+        <div id="confirmation-container" class="confirmation-modal border">
+          <div class="modal-section"><div class="modal-header"><p id="heading-message"></p></div></div>
+          <div class="modal-section modal-content">
               <p id="content-message"></p>
-            </div>
-            <div id="confirmation-container-btn">
-              <button id="cancel-confirmation" onclick="CloseCModal()"><strong>Annuler</strong></button>
-              <button id="accept-confirmation"><strong>Confirmer</strong></button>
-            </div>
+              <div id="open-content" class="open-content"></div>
           </div>
-        </div>
 
-        <div id="catchingUp-modal" style="display: none;">
-          <div id="catchingUp-container">
-            <div id="search-box">
-              <input type="text" name="" id="search-CatchinUp" placeholder="Nom/N°coopérateur">
-              <button id="seach-member" onclick="searchMember('search-CatchinUp')">Rechercher</button>
-              <div id="member-list"></div>
-            </div>
-            <div id="loading" class="loading-section">
-              <div class="centered-margin">
-                  <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+          <div id="conf-btns" class="modal-section">
+              <div class="centered-btn">
+                  <button id="cancel-confirmation" class="btn-large border margin" onclick="CloseCModal()">Annuler</button>   
+                  <button id="accept-confirmation" class="btn-large border margin">Confirmer</button>
               </div>
-            </div>
-            <div id="catchingUp-container-btn">
-              <button id="cancel-catchingUp" onclick="CloseCatchingUpModal()"><strong>Annuler</strong></button>
-              <button id="accept-catchingUp" onclick="registerCatchUp()"><strong>Confirmer</strong></button>
+          </div>
+        </div>
+      </div>
+
+      <div id="registration-modal" class="modal-blur">
+        <div id="registration-container" class="registration-modal border">
+          <div class="modal-section"><div class="modal-header"><p id="heading-message">Inscription</p></div></div>
+          <div class="modal-section search-member-container">
+            <input type="text" id="search-member-input" class="input border" placeholder="Nom/N°coopérateur">
+            <button id="seach-member-btn" class="search-btn border" onclick="searchMember()">Rechercher</button>
+          </div>
+          <div id="member-list" class="modal-section"></div>
+          <div id="loader" class="modal-section">
+            <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+          </div>
+          <div id="conf-btns" class="modal-section">
+            <div class="centered-btn">
+              <button id="cancel-registration" class="btn-large border margin" onclick="closeRegistrationModal()">Annuler</button>   
+              <button id="accept-registration" class="btn-large border margin" onclick="registrateMember()">Confirmer</button>
             </div>
           </div>
         </div>
+      </div>
 
-        {% for shift in shifts %}
+      {% for shift in shifts %}
         <div id="{{shift.shift_id}}" shift_id="{{shift.shift_id}}" class="shift">
-            <div class="shiftHeader">
-                <h2>{{shift.shift_display_name}}</h2>
-                <button class="catchUpBtn" onclick="askCatchingUp({{shift.shift_id}})">S'inscrire</button>
-            </div>
-            <ul>
-                {% for member in shift.members %}
-                    {% if member.state == "done" %}
-                        <li id="{{member.registration_id}}" registration_id="{{member.registration_id}}" class="{{member.state}}" 
-                        shift_id="{{member.shift_id}}" partner_id="{{member.partner_id}}" state="{{member.state}}" 
-                        onclick="askConfirmationReset({{member.registration_id}})">{{member.display_name|safe}}
-                        </li>
-                    {% else %}
-                        <li id="{{member.registration_id}}" registration_id="{{member.registration_id}}" class="{{member.state}}" 
-                        shift_id="{{member.shift_id}}" partner_id="{{member.partner_id}}" state="{{member.state}}" 
-                        onclick="askConfirmation({{member.registration_id}})">{{member.display_name|safe}}
-                        </li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
+          <div class="shiftHeader">
+            <h2>{{shift.shift_display_name}}</h2>
+            <button class="registration-btn border" onclick="askRegistration({{shift.shift_id}})">S'inscrire</button>
+          </div>
+          <ul class="border">
+            {% if shift.members|length > 0 %}
+              {% for member in shift.members %}
+                {% if member.state == "done" %}
+                  <li id="{{member.registration_id}}" registration_id="{{member.registration_id}}" class="{{member.state}} border-light" 
+                  shift_id="{{member.shift_id}}" partner_id="{{member.partner_id}}" state="{{member.state}}" name="{{member.name}}" 
+                  associate_name="{{member.associate_name}}" onclick="askConfirmationReset({{member.registration_id}})">{{member.display_name|safe}}
+                  </li>
+                {% else %}
+                  <li id="{{member.registration_id}}" registration_id="{{member.registration_id}}" class="{{member.state}} border-light" 
+                  shift_id="{{member.shift_id}}" partner_id="{{member.partner_id}}" state="{{member.state}}" name="{{member.name}}"
+                  associate_name="{{member.associate_name}}" onclick="askConfirmation({{member.registration_id}})">{{member.display_name|safe}}
+                  </li>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              <li class="placeholder open border" style="text-align: center;"><strong>Aucun membre inscrit</strong></li>
+            {% endif %}
+          </ul>
         </div>
-        {% endfor %}
+      {% endfor %}
 
-        <script type="text/javascript" src="/static/js/shifts.js"></script>
+      <script type="text/javascript" src="/static/js/shifts.js"></script>
     </body>
 </html>

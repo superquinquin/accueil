@@ -5,7 +5,7 @@ from erppeek import Record
 from attrs import define, field, validators
 from typing import Any, Optional, Literal
 
-from accueil.utils import translate_day
+from accueil.utils import translate_day, translate_shift_status, translate_coop_status
 
 
 
@@ -95,12 +95,17 @@ class ShiftMember:
     
     @property
     def payload(self) -> dict[str, Any]:
+        associate_name = None
+        if len(self.associated_members) > 0:
+            associate_name = self.associated_members[0].name
         return {
             "partner_id": self.partner_id,
             "registration_id": self.registration_id,
             "shift_id": self.shift_id,
             "state": self.state,
-            "display_name": self.display_name
+            "display_name": self.display_name,
+            "name": self.name,
+            "associate_name": associate_name
         }
     
     @property
@@ -116,6 +121,25 @@ class ShiftMember:
             "std_counter": self.std_counter,
             "cycle_type": cycle_type,
             "end_cycle_date": cycle_end
+        }
+    
+    @property
+    def admin_payload(self) -> dict[str, str]:
+        cycle_type = "standard"
+        if self.cycle_type == "ftop":
+            cycle_type = "volant"
+            cycle_name = self.cycle.cycle
+        else:
+            cycle_name = "/"
+
+        return {
+            "name": self.name,
+            "cycle_type": cycle_type,
+            "cycle_name": cycle_name,
+            "state": translate_shift_status(self.state),
+            "coop_state": translate_coop_status(self.coop_state),
+            "std_counter": self.std_counter,
+            "ftop_counter": self.ftop_counter
         }
     
     @classmethod
@@ -211,6 +235,14 @@ class Shift(object):
             "date": self.begin.strftime("%d-%m"),
             "start_hours": self.begin.strftime('%H:%M'),
             "end_hours": self.end.strftime('%H:%M'),
+        }
+    
+    @property
+    def admin_payload(self) -> dict[str, Any]:
+        return {
+            "shift_id": self.shift_id,
+            "shift_display_name": self.shift_display_name,
+            "members": [member.admin_payload for member in self.members.values()]
         }
     
     @property
