@@ -9,6 +9,8 @@ from attrs import define, field, validators
 from jinja2 import Template
 
 from accueil.models.shift import ShiftMember, Shift
+from accueil.exceptions import TooManyReceivers, UnknownSender, UnknownMailTemplate
+from accueil.utils import into_batches
 
 
 ObjMail = BodyMail = Mail = str
@@ -103,6 +105,8 @@ class MailManager(object):
         
 
     def send(self, tx: str, rx: Mail | list[Mail], msg: MIMEText) -> None:
+        if len(rx) > 50:
+            raise TooManyReceivers()
         with smtplib.SMTP(self._smtp_server, self._smtp_port) as smtp:
             smtp.login(self.__login, self.__password)
             smtp.starttls()
@@ -113,28 +117,26 @@ class MailManager(object):
             ) 
         
     def send_group(self, tx: str, rx: list[Mail], msg: MIMEText) -> None:
-        if len(rx) > 90:
-            raise ValueError("Limit the number of receivers to 90 maximum")
-        
-        with smtplib.SMTP(self._smtp_server, self._smtp_port) as smtp:
-            smtp.login(self.__login, self.__password)
-            smtp.starttls()
-            smtp.sendmail(
-                self.get_sender(tx),
-                rx,
-                msg.as_string()
-            ) 
+        for batch in into_batches(rx, 50):
+            with smtplib.SMTP(self._smtp_server, self._smtp_port) as smtp:
+                smtp.login(self.__login, self.__password)
+                smtp.starttls()
+                smtp.sendmail(
+                    self.get_sender(tx),
+                    batch,
+                    msg.as_string()
+                ) 
                 
     def get_sender(self, tx: str) -> Mail:
         sender = self.senders.get(tx, None)
         if sender is None:
-            raise KeyError("Unknown sender")
+            raise UnknownSender()
         return sender
     
     def get_template(self, template_name: str) -> MailTemplate:
         template = self.templates.get(template_name, None)
         if template is None:
-            raise KeyError("template name doesn't exist")
+            raise UnknownMailTemplate()
         return template
     
     def _personalization_payload(self, shift: Shift, member: ShiftMember) -> dict[str, str]:
@@ -161,9 +163,6 @@ class MailManager(object):
                 template_name = "volant_abs"
 
             formated_mail = self.format_mail(shift, member, template_name, "bdm", rx)
-
-
-
-# self.send(tx, rx, formated_mail)            
+            self.send("bdm", rx, formated_mail)
                 
                 

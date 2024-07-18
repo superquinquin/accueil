@@ -6,8 +6,6 @@ from sanic.log import LOGGING_CONFIG_DEFAULTS
 
 from typing import Any
 
-
-
 from accueil.routes import basebp, registrationbp
 from accueil.channel import Channel
 from accueil.mail import MailManager
