@@ -63,7 +63,7 @@ class Odoo(object):
                     _ok = True
                 except (CannotSendRequest, AssertionError):
                     _tries += 1
-                    self.connect(**self.creds)
+                    self.connect()
             if _ok is False:
                 raise ConnectionError("cannot connect to odoo")
             return res
@@ -165,14 +165,16 @@ class Odoo(object):
         return self.get("res.partner", [("id", "=", partner_id)])
         
     def get_members_from_barcodebase(self, barcode_base: int):
+        """limit to the 25 first elements"""
         members = self.browse("res.partner", [("barcode_base","=", barcode_base), ("cooperative_state", "not in", ["unsubscribed"])])
-        payload = [{"partner_id": m.id, "name": m.name, "barcode_base": m.barcode_base} for m in members]
+        payload = [{"partner_id": m.id, "name": m.name, "barcode_base": m.barcode_base} for m in members[:25]]
         return payload
         
     def get_members_from_name(self, name: str):
+        """limit to the 25 first elements"""
         members = self.browse("res.partner",[("name","ilike", name),("cooperative_state", "not in", ["unsubscribed"])])
-        payload = [{"partner_id": m.id, "name": m.name, "barcode_base": m.barcode_base} for m in members]
-        return payload    
+        payload = [{"partner_id": m.id, "name": m.name, "barcode_base": m.barcode_base} for m in members[:25]]
+        return payload
 
     # --
     
