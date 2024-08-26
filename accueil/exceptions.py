@@ -1,6 +1,9 @@
 
 
+
 class AccueilException(Exception):
+    message = ""
+    status = ""
     pass
 
 

@@ -101,3 +101,7 @@ app:
         level: INFO
         handlers: [stream, error_file, access_file]
         propagate: False
+      odoo:
+        level: INFO
+        handlers: [stream, error_file, access_file]
+        propagate: False

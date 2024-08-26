@@ -22,13 +22,12 @@ async def error_handler(request: Request, exception: Exception):
         logger.error(traceback.format_exc())
     return json({"status": status, "reasons": str(exception)})
 
-async def go_fast(request: Request) -> HTTPResponse:
+async def go_fast(request: Request) -> None:
     request.ctx.t = perf_counter()
 
-async def log_exit(request: Request, response: HTTPResponse) -> HTTPResponse:
+async def log_exit(request: Request, response: HTTPResponse) -> None:
     perf = round(perf_counter() - request.ctx.t, 5)
     if response.status == 200:
         logger.info(
             f"{request.host} > {request.method} {request.url} [{request.load_json()}][{str(response.status)}][{str(len(response.body))}b][{perf}s]"
         )
-
