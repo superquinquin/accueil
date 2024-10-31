@@ -6,4 +6,4 @@ mail_templates
 old
 dist
 ztest.py
-configs/configs.yaml
+configs/*.yaml

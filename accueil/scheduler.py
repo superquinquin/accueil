@@ -93,7 +93,7 @@ class Scheduler(object):
         odoo: Odoo = app.ctx.odoo
         shifts: dict[int, Shift] = app.ctx.shifts
         ftop_shifts: dict[int, Shift] = app.ctx.ftop_shifts
-        mail_manager: MailManager = app.ctx.mail_manager
+        mail_manager: MailManager|None = app.ctx.mail_manager
 
         if set_absences:
             logger.info("SETTING REGULAR SHIFTS ABSENCES...")
@@ -103,7 +103,7 @@ class Scheduler(object):
                 [odoo.close_shift(shift) for shift in shifts.values()]
             if send_absence_mails and MailManager is not None:
                 logger.info("EMAILING REGULAR SHIFTS ABSENCES...")
-                [mail_manager.send_absence_mails(shift) for shift in shifts.values()]
+                [mail_manager.send_absence_mails(shift) for shift in shifts.values()] # type: ignore
 
         if close_ftop:
             logger.info("CLOSING FTOP SHIFTS...")
