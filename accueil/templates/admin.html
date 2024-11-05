@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html id="html">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>shifts</title>
+        <meta name="shifts" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="../static/css/admin.css">
+    </head>
+    <body id="body">
+        {% for shift in shifts %}
+            <div id="{{shift.shift_id}}" shift_id="{{shift.shift_id}}" class="shift">
+                <div class="shiftHeader">
+                    <h2>{{shift.shift_display_name}}</h2>
+                </div>
+                <table class="border">
+                    <tr>
+                        <th>Nom</th>
+                        <th>Type</th>
+                        <th>Cycle</th>
+                        <th>Status</th>
+                        <th>Status du coopérateur</th>
+                        <th>Compteur standard</th>
+                        <th>Compteur volant</th>
+                    </tr>
+                    {% if shift.members|length > 0 %}
+                        {% for member in shift.members %}
+                            <tr>
+                                <td>{{member.name}}</td>
+                                <td>{{member.cycle_type}}</td>
+                                <td class="center">{{member.cycle_name}}</td>
+                                <td class="{{member.state| replace(' ', '-')}}">{{member.state}}</td>
+                                <td class="{{member.coop_state| replace(' ', '-')}}">{{member.coop_state}}</td>
+                                <td class="center stdc">{{member.std_counter}}</td>
+                                <td class="center ftopc">{{member.ftop_counter}}</td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td class="center">/</td>
+                        <td class="center">/</td>
+                        <td class="center">/</td>
+                        <td class="center">/</td>
+                        <td class="center">/</td>
+                        <td class="center">/</td>
+                        <td class="center">/</td>
+                    </tr>
+                    {% endif %}
+                </table>
+        {% endfor %}
+        <script type="text/javascript" src="/static/js/admin.js"></script>
+    </body>

@@ -1,0 +1,29 @@
+services:
+  fives:
+    build: .
+    container_name: accueil_fives
+    env_file: .env_fives_staging
+    ports:
+      - 8010:8010
+    volumes:
+      - ./volume:/opt/pysetup/volume
+      - ./mail_templates:/opt/pysetup/mail_templates
+      - ./configs:/opt/pysetup/configs
+    entrypoint:
+      ["sanic", "asgi:app", "--host=0.0.0.0", "--port=8010", "--single-process", "--no-motd"]
+
+  vdm:
+    build: .
+    container_name: accueil_vdm
+    env_file: .env_vdm
+    ports:
+      - 8011:8011
+    volumes:
+      - ./volume:/opt/pysetup/volume
+      - ./mail_templates:/opt/pysetup/mail_templates
+      - ./configs:/opt/pysetup/configs
+    entrypoint:
+      ["sanic", "asgi:app", "--host=0.0.0.0", "--port=8011", "--single-process", "--no-motd"]
+
+networks:
+  accueil:

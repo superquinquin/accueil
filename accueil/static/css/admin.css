@@ -1,0 +1,80 @@
+html {
+  font-family: 'Raleway', sans-serif;
+  overflow-x: hidden;
+  overflow-y: visible ;
+}
+
+body {
+  background-color: antiquewhite;
+  margin: 100px auto;
+  width: 50%;
+}
+
+
+/* COMPONENTS */
+
+.border {
+  border-radius: 5px;
+  border-top: solid 1px #3C312E;
+  border-right: solid 3px #3C312E;
+  border-bottom: solid 3px #3C312E;
+  border-left: solid 1px #3C312E;
+}
+
+.border-light {
+  border-radius: 5px;
+  border-top: solid 1px #3C312E;
+  border-right: solid 2px #3C312E;
+  border-bottom: solid 2px #3C312E;
+  border-left: solid 1px #3C312E;
+}
+
+.shift {
+  margin: 50px 0 50px 0;
+}
+
+
+/* rgb(160 160 160) */
+th, td {
+  border: 1px solid #3C312E; 
+  padding: 8px 10px;
+}
+
+th {
+  background-color: #35C099;
+}
+
+td {
+  background-color: #CFF2E8;
+}
+
+.center {
+  text-align: center;
+}
+
+/* GREEN */
+.Présent, .Excusé, .Remplacé,
+.Exempté, .A-jour, .Non-Concerné {
+  background-color: #6FD8BA; 
+}
+/* #35C099 */
+
+/* NORMAL */
+.Remplaçant, .Confirmé {
+  background-color: #CFF2E8;
+}
+
+
+/* YELOW */
+.Non-Confirmé, .Annulé, .En-attente,
+.Delai, .En-Alerte , .En-Congés {
+  background-color: #E0C867;
+}
+
+/* #FAA916 */
+
+/* RED */
+.Absent,
+.Suspendu, .Désinscrit {
+  background-color: #F06449;
+}
