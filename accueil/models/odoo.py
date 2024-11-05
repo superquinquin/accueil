@@ -93,9 +93,13 @@ class Odoo(object):
         """build shifts, shiftMembers and add members to shifts"""
         shifts = self.get_today_shifts(ftop=ftop)
         for shift in shifts:
-            logger.info(f"COLLECTING {shift} ...")
-            members = self.get_shift_members(shift.shift_id, cycles)
-            shift.add_shift_members(*members)
+            if ftop is False:
+                # not interacting with ftop members. only use of ftop shift is for closing.
+                # Unsure if for closing ftop shift, setting members state necessary or not ?
+                # keep cond unless, needed to act on ftop and that ftop needs members to be collected.
+                logger.info(f"COLLECTING {shift} ...")
+                members = self.get_shift_members(shift.shift_id, cycles)
+                shift.add_shift_members(*members)
         return shifts
 
     def get_today_shifts(self, ftop: bool = False) -> list[Shift]:
@@ -223,6 +227,9 @@ class Odoo(object):
 
     def set_regular_shifts_absences(self, shifts: list[Shift]) -> list[list[ShiftMember]]:
         return [self.set_regular_shift_absences(shift) for shift in shifts]
+
+    def close_shifts(self, shifts: list[Shift]) -> None:
+        [self.close_shift(shift) for shift in shifts]
 
     def close_shift(self, shift: Shift) -> None:
         record = self.get("shift.shift", [("id", "=", shift.shift_id)])
