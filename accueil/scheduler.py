@@ -97,17 +97,17 @@ class Scheduler(object):
 
         if set_absences:
             logger.info("SETTING REGULAR SHIFTS ABSENCES...")
-            [odoo.set_regular_shifts_absences(shift) for shift in shifts.values()] # type: ignore
+            odoo.set_regular_shifts_absences(list(shifts.values()))
             if close_shifts:
                 logger.info("CLOSING REGULAR SHIFTS...")
-                [odoo.close_shift(shift) for shift in shifts.values()]
+                odoo.close_shifts(list(shifts.values()))
             if send_absence_mails and MailManager is not None:
                 logger.info("EMAILING REGULAR SHIFTS ABSENCES...")
                 [mail_manager.send_absence_mails(shift) for shift in shifts.values()] # type: ignore
 
         if close_ftop:
             logger.info("CLOSING FTOP SHIFTS...")
-            [odoo.close_shift(shift) for shift in ftop_shifts.values()]
+            odoo.close_shifts(list(ftop_shifts.values()))
 
     def _build_queue(self, app: Sanic) -> None:
         early = getattr(app.config, "ACCEPT_EARLY_ENTRANCE", {"minutes": 15})
