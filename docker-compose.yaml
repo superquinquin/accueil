@@ -2,7 +2,7 @@ services:
   fives:
     build: .
     container_name: accueil_fives
-    env_file: ./fives_staging.env
+    env_file: .env_fives_staging
     ports:
       - 8010:8010
     volumes:
@@ -15,7 +15,7 @@ services:
   vdm:
     build: .
     container_name: accueil_vdm
-    env_file: ./vdm.env
+    env_file: .env_vdm
     ports:
       - 8011:8011
     volumes:
