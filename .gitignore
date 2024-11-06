@@ -8,3 +8,5 @@ old
 dist
 ztest.py
 configs/*.yaml
+conf/
+*.conf
