@@ -107,7 +107,7 @@ class MailManager(object):
             raise TooManyReceivers()
         with smtplib.SMTP(self._smtp_server, self._smtp_port) as smtp:
             smtp.login(self.__login, self.__password)
-            smtp.starttls()
+            # smtp.starttls()
             smtp.sendmail(
                 self.get_sender(tx),
                 rx,
@@ -118,7 +118,7 @@ class MailManager(object):
         for batch in into_batches(rx, 50):
             with smtplib.SMTP(self._smtp_server, self._smtp_port) as smtp:
                 smtp.login(self.__login, self.__password)
-                smtp.starttls()
+                # smtp.starttls()
                 smtp.sendmail(
                     self.get_sender(tx),
                     batch,
