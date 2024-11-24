@@ -5,7 +5,9 @@ from accueil.exceptions import (
     AccueilException,
     TooManyRegistrationsSet,
     DuplicateRegistration,
-    UnknownXmlrcpError
+    UnknownXmlrcpError,
+    NoMoreSeatsAvailable,
+    CannotRegisterDuringLeavePeriod
 )
 
 def translate_day(name: str) -> str:
@@ -41,6 +43,10 @@ def handle_odoo_exceptions(fault: Exception) -> AccueilException:
         return TooManyRegistrationsSet()
     elif "This partner is already registered on this Shift" in fault.faultCode: # type: ignore
         return DuplicateRegistration()
+    elif "No more available seats for this ticket" in fault.faultCode: # type: ignore
+        return NoMoreSeatsAvailable()
+    elif "that falls within the period of the" in fault.faultCode: # type: ignore
+        return CannotRegisterDuringLeavePeriod()
     else:
         return UnknownXmlrcpError()
 

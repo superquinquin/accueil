@@ -1,6 +1,8 @@
 import logging
 import traceback
 import json as js
+from xmlrpc.client import Fault
+from socket import gaierror
 from sanic import Blueprint, Request, Websocket
 from sanic.response import json, HTTPResponse, empty
 from sanic_ext import render
@@ -8,7 +10,7 @@ from sanic_ext import render
 from accueil.channel import Channel
 from accueil.models.odoo import Odoo
 from accueil.models.shift import Shift
-from accueil.exceptions import UnknownXmlrcpError
+from accueil.exceptions import UnknownXmlrcpError, UnknownSocketError
 from accueil.utils import handle_odoo_exceptions
 
 logger = logging.getLogger("endpointAccess")
@@ -118,8 +120,14 @@ async def registration(request: Request, ws: Websocket):
             await channel.broadcast(js.dumps(payload))
 
         except Exception as e:
-            error = handle_odoo_exceptions(e)
-            if isinstance(error, UnknownXmlrcpError):
+            if isinstance(e, Fault):
+                error = handle_odoo_exceptions(e)
+            elif isinstance(e, gaierror):
+                error = UnknownSocketError()
+            else:
+                error = UnknownXmlrcpError()
+
+            if isinstance(error, UnknownXmlrcpError) or isinstance(error, UnknownSocketError):
                 logger.error(traceback.format_exc())
             else:
                 logger.error(f"{request.host} > {request.method} {request.url} : {str(error)} [{str(error.status)}][{str(len(str(error.message)))}b]")

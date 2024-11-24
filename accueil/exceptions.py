@@ -27,6 +27,24 @@ class UnknownXmlrcpError(AccueilException):
     def __init__(self) -> None:
         super().__init__(self.message)
 
+class NoMoreSeatsAvailable(AccueilException):
+    message = """Service Complet."""
+    status = 500
+    def __init__(self) -> None:
+        super().__init__(self.message)
+
+class CannotRegisterDuringLeavePeriod(AccueilException):
+    message = """Inscription aux services se déroulant pendant les congés d'un membre est impossible."""
+    status = 500
+    def __init__(self) -> None:
+        super().__init__(self.message)
+
+class UnknownSocketError(AccueilException):
+    message = """Une erreur s'est produite."""
+    status = 500
+    def __init__(self) -> None:
+        super().__init__(self.message)
+
 
 # -- MAIL
 class TooManyReceivers(AccueilException):
