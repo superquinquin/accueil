@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 import logging
+from xmlrpc.client import Fault
 from datetime import datetime, date, timedelta
 from functools import wraps
 from http.client import CannotSendRequest
@@ -224,11 +225,13 @@ class Odoo(object):
         [setattr(member, "state", "absent")  for member in absent_members]
         for member in absent_members:
             try:
-                rid = member.registration_id
-                self.client.write("shift.registration", [rid], {"state": "absent"}) # type: ignore
+                registration = self.get("shift.registration", [("id","=", member.registration_id)])
+                registration.button_reg_absent() # type: ignore
+            except Fault:
+                # bypass Marshall None Error. 
+                pass
             except Exception:
                 logger.warning(f"Cannot set member absence: {member.name}")
-        # self.client.write("shift.registration", [s.registration_id for s in absent_members], {"state": "absent"}) # type: ignore
         return absent_members
 
     def set_regular_shifts_absences(self, shifts: list[Shift]) -> list[list[ShiftMember]]:
