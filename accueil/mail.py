@@ -155,7 +155,7 @@ class MailManager(object):
             rx = [member.mail]
             # Counters always int for main members. Mailing operation always use main member.
             if member.cycle_type == "standard" and int(member.ftop_counter) > 0: # type: ignore
-                template_name = "fixe_ant_abs"
+                template_name = "fixe_no_ant_abs"
             elif member.cycle_type == "standard" and int(member.ftop_counter) == 0: # type: ignore
                 template_name = "fixe_no_ant_abs"
             elif member.cycle_type == "ftop":
