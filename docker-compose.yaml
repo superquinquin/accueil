@@ -6,7 +6,7 @@ services:
     env_file: .env_fives_prod
     restart: always
     ports:
-      - 8010:8010
+      - 127.0.0.1:8010:8010
     volumes:
       - ./volume:/opt/pysetup/volume
       - ./mail_templates:/opt/pysetup/mail_templates
@@ -20,7 +20,7 @@ services:
     env_file: .env_vdm
     restart: always
     ports:
-      - 8110:8010
+      - 127.0.0.1:8110:8010
     volumes:
       - ./volume:/opt/pysetup/volume
       - ./mail_templates:/opt/pysetup/mail_templates
