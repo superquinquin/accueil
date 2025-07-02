@@ -4,20 +4,47 @@ import copy
 import glob
 import logging
 import smtplib
+import operator
 from pathlib import Path
+from erppeek import Record
 from email.mime.text import MIMEText
 from attrs import define, field, validators
 from jinja2 import Template, StrictUndefined
+
+from typing import Callable, Any
 
 from accueil.models.shift import ShiftMember, Shift
 from accueil.exceptions import TooManyReceivers, UnknownSender, UnknownMailTemplate
 from accueil.utils import into_batches
 
 
+
 ObjMail = BodyMail = Mail = str
 StrOrPath = str | Path
 
 logger = logging.getLogger("mail")
+
+@define(frozen=True)
+class SendingConditions:
+    target: str = field()
+    conditions: list[tuple[str, Callable, Any]] = field()
+
+    @classmethod
+    def from_configs(cls, target: str, conditions: dict[str, Any]) -> SendingConditions:
+        parsed_conditions = [(k, getattr(operator, v[0]), v[1]) for k,v in conditions.items()]
+        return cls(target, parsed_conditions)
+
+    def test_member(self, member: ShiftMember) -> bool:
+        tests = []
+        for key, op, value in self.conditions:
+            if value == "*":
+                tests.append(True)
+            else:
+                member_value = getattr(member, key)
+                tests.append(op(member_value, value))
+        return all(tests)
+    
+
 
 @define(repr=False, frozen=True, slots=True)
 class MailTemplate:
@@ -54,6 +81,7 @@ class MailManager(object):
     _smtp_server: str = field(validator=[validators.instance_of(str)])
     _smtp_port: int = field(default=587, validator=[validators.instance_of(int)])
     templates: dict[str, MailTemplate] = field(default={}, validator=[validators.instance_of(dict)])
+    conditions: list[SendingConditions] = field(default=[], validator=[validators.instance_of(list)])
     senders: dict[str, Mail] = field(default={}, validator=[validators.instance_of(dict)])
     variables: dict[str, dict] = field(default={}, validator=[validators.instance_of(dict)])
 
@@ -69,6 +97,7 @@ class MailManager(object):
         smtp_server: str,
         smtp_port: int = 587,
         templates_paths: dict[str, StrOrPath],
+        conditions: dict[str, Any],
         senders: dict[str, Mail],
         variables: dict[str, dict]
         ) -> MailManager:
@@ -81,6 +110,7 @@ class MailManager(object):
             variables=variables
         )
         manager.register_templates_folders(**templates_paths)
+        manager.register_conditions(conditions)
         return manager
 
     def register_templates_folders(self, *templates_folders, **named_templates_folders) -> None:
@@ -88,6 +118,11 @@ class MailManager(object):
         folders.update(named_templates_folders)
         for name, folder_path in folders.items():
             self.register_template(name, folder_path)
+
+    def register_conditions(self, conditions: dict[str, Any]) -> None:
+        self.conditions = []
+        for key, key_conditions in conditions.items():
+            self.conditions.append(SendingConditions.from_configs(key, key_conditions))
 
     def register_template(self, name: str, folder_path: Path) -> None:
         self.templates.update({name:MailTemplate.from_folder_path(name, folder_path)})
@@ -154,15 +189,12 @@ class MailManager(object):
 
             rx = [member.mail]
             # Counters always int for main members. Mailing operation always use main member.
-            if member.cycle_type == "standard" and int(member.ftop_counter) > 0: # type: ignore
-                template_name = "fixe_no_ant_abs"
-            elif member.cycle_type == "standard" and int(member.ftop_counter) == 0: # type: ignore
-                template_name = "fixe_no_ant_abs"
-            elif member.cycle_type == "ftop":
-                template_name = "volant_abs"
-            else:
-                template_name = "fixe_ant_abs"
-
+            template_name = "fixe_ant_abs"
+            for condition in self.conditions:
+                if condition.test_member(member):
+                    template_name = condition.target
+                    break
+                
             try:
                 formated_mail = self.format_mail(shift, member, template_name, "bdm", rx)
                 self.send("bdm", rx, formated_mail)
