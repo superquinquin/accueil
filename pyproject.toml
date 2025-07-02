@@ -31,11 +31,7 @@ build-backend = "poetry.core.masonry.api"
 minversion = "6.0"
 addopts = "--no-header -l --cov accueil -m 'not running_server'"
 
-testpaths = [
-    "tests"
-]
+testpaths = ["tests"]
 
 [tool.coverage.run]
-omit = [
-    "tests/*",
-]
+omit = ["tests/*"]

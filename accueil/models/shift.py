@@ -261,8 +261,8 @@ class Shift(object):
             shift_record.id, # type: ignore
             shift_record.shift_type_id.id, # type: ignore
             shift_record.shift_template_id.id, # type: ignore
-            tickets.get("standard", None),
-            tickets.get("ftop", None),
+            tickets.get("standard", None), # type: ignore
+            tickets.get("ftop", None), # type: ignore
             shift_record.name, # type: ignore
             shift_record.week_name, # type: ignore
             datetime.fromisoformat(shift_record.date_begin_tz), # type: ignore
