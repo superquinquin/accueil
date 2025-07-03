@@ -12,7 +12,7 @@ from accueil.mail import MailManager
 from accueil.models.odoo import Odoo
 from accueil.listeners import start_scheduler
 from accueil.middlewares import go_fast, log_exit, error_handler
-from accueil.parsers import get_config
+from accueil.loaders import ConfigLoader
 
 Payload = dict[str, Any]
 
@@ -67,7 +67,8 @@ class Accueil:
 
     @classmethod
     def create_app(cls) -> Accueil:
-        cfg = get_config(os.environ.get("CONFIG_FILEPATH", "./configs/config.yaml"))
+        fp = os.environ.get("CONFIG_FILEPATH", "./configs/config.yaml")
+        cfg = ConfigLoader().load(fp)
         return cls(**cfg)
 
     def print_banner(self) -> None:
