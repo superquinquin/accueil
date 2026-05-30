@@ -251,10 +251,7 @@ class OdooSession(ContextDecorator):
         assert isinstance(shift_type, str)
 
         if shift_type == "standard":
-            std = member_record.final_standard_point
-            assert isinstance(std, str) and std.isnumeric()
-
-            std_points = int(std)
+            std_points = int(member_record.final_standard_point)
             shift_type = get_appropriate_shift_type(shift_type, std_points)
         shift_ticket_id = getattr(shift, f"{shift_type}_ticket_id")
 
