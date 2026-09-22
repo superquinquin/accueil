@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from erppeek import Record, RecordList
+from odooly import Record, RecordList
 from attrs import define, field, validators
 from typing import Any, Optional, Literal
 

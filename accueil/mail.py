@@ -6,7 +6,6 @@ import logging
 import smtplib
 import operator
 from pathlib import Path
-from erppeek import Record
 from email.mime.text import MIMEText
 from attrs import define, field, validators
 from jinja2 import Template, StrictUndefined
